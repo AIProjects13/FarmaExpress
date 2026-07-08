@@ -352,10 +352,11 @@
                                     <input type="date" id="fin-date-end" onchange="renderFinanzas()" oninput="renderFinanzas()" class="input-base w-auto text-sm" placeholder="Fin">
                                     <button onclick="document.getElementById('fin-date-start').value=''; document.getElementById('fin-date-end').value=''; renderFinanzas();" class="text-gray-400 hover:text-red-500 transition px-2" title="Limpiar Filtros"><i class="fa-solid fa-eraser"></i></button>
                                 </div>
-                                <span class="text-[10px] text-gray-400 italic"><i class="fa-solid fa-circle-info mr-1"></i>Por defecto carga los últimos 7 días. Ajusta las fechas para ver historiales antiguos.</span>
+                                <span class="text-[10px] text-gray-400 italic"><i class="fa-solid fa-circle-info mr-1"></i>Por rapidez, solo carga los últimos 50 registros recientes. Si necesitas buscar datos más antiguos de 7 días, haz clic en "Cargar Todo" a la derecha.</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
+                            <button onclick="fetchFullHistory()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition flex items-center gap-2 text-sm"><i class="fa-solid fa-cloud-arrow-down"></i> Cargar Todo</button>
                             <button onclick="exportFinanzasCSV()" class="admin-only bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-green-700 transition flex items-center gap-2 text-sm"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
                         </div>
                     </div>
@@ -584,10 +585,16 @@
                 <!-- 8. AUDITORÍA -->
                 <div id="tab-audit" class="tab-content hidden-view animate-fade w-full">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                        <h2 class="text-2xl font-bold text-primary">Registros del Sistema (Logs)</h2>
-                        <div class="relative w-full md:w-80">
-                            <i class="fa-solid fa-search absolute left-3 top-2.5 text-gray-400 text-sm"></i>
-                            <input type="text" id="srch-audit" class="input-base pl-9 text-sm py-2" placeholder="Buscar registros..." oninput="renderAudit()">
+                        <div>
+                            <h2 class="text-2xl font-bold text-primary">Registros del Sistema (Logs)</h2>
+                            <span class="text-[10px] text-gray-400 italic block mt-1"><i class="fa-solid fa-circle-info mr-1"></i>Mostrando los últimos 50 registros por defecto para mayor rapidez.</span>
+                        </div>
+                        <div class="flex items-center gap-3 w-full md:w-auto">
+                            <button onclick="fetchFullHistory()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition flex items-center gap-2 text-sm"><i class="fa-solid fa-cloud-arrow-down"></i> Cargar Todo</button>
+                            <div class="relative flex-1 md:w-80">
+                                <i class="fa-solid fa-search absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+                                <input type="text" id="srch-audit" class="input-base pl-9 text-sm py-2" placeholder="Buscar registros..." oninput="renderAudit()">
+                            </div>
                         </div>
                     </div>
                     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden h-[600px] overflow-y-auto">
@@ -1290,7 +1297,17 @@
             else badge.style.pointerEvents = 'auto';
         }
 
-        const syncData = window.syncData = async (silent = false, forceRefresh = false) => {
+        const fetchFullHistory = window.fetchFullHistory = async () => {
+            if(!confirm("Esto descargará todo el historial histórico desde el inicio. Puede tardar varios segundos. ¿Deseas continuar?")) return;
+            showToast("Descargando historial completo...", "info");
+            await syncData(false, false, true);
+            showToast("Historial descargado con éxito.", "success");
+            
+            if (!document.getElementById('tab-fin').classList.contains('hidden-view')) renderFinanzas();
+            if (!document.getElementById('tab-audit').classList.contains('hidden-view')) renderAudit();
+        };
+
+        const syncData = window.syncData = async (silent = false, forceRefresh = false, fullHistory = false) => {
             if (!silent) setLoading(true);
             try {
                 await processOfflineQueue();
@@ -1304,12 +1321,13 @@
                     } catch(e) { console.error("Error obteniendo token JWT", e); }
                 }
                 
-                const res = await fetch(`${SCRIPT_URL}?sheetName=all&_cb=${Date.now()}${authParam}`);
+                const historyParam = fullHistory ? '&fullHistory=true' : '';
+                const res = await fetch(`${SCRIPT_URL}?sheetName=all&_cb=${Date.now()}${authParam}${historyParam}`);
                 const data = await res.json();
                 
                 if (data.status === 'error' && data.message && data.message.includes('ACCESO DENEGADO') && !forceRefresh) {
                     console.log("Token expirado en syncData, intentando refrescar...");
-                    return await syncData(silent, true);
+                    return await syncData(silent, true, fullHistory);
                 }
 
                 if(data.status === 'success') {
@@ -2872,42 +2890,44 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
         }
 
         window.exportFinanzasCSV = () => {
-            let csvContent = "data:text/csv;charset=utf-8,\n--- RECIBOS Y COBROS ---\nRecibo No.,Fecha,Cliente,Total,Estado\n";
+            let csvContent = "--- RECIBOS Y COBROS ---\nRecibo No.,Fecha,Cliente,Total,Estado\n";
             const ft = document.getElementById('tbl-facturas');
             ft.querySelectorAll('tr').forEach(tr => {
                 const tds = tr.querySelectorAll('td');
-                if(tds.length === 4) {
-                    const idDate = tds[0].innerText.split('\n');
-                    const id = idDate[0] || '';
-                    const date = idDate[1] || tds[0].innerText;
-                    const cliente = tds[1].innerText;
-                    const total = tds[2].innerText.replace(/["Q,]/g, '').trim();
-                    const estado = tds[3].innerText;
+                if(tds.length === 5) {
+                    const id = tds[0].innerText.trim();
+                    const date = tds[1].innerText.trim();
+                    const cliente = tds[2].innerText.trim().replace(/"/g, '""');
+                    const total = tds[3].innerText.replace(/["Q,]/g, '').trim();
+                    const estado = tds[4].innerText.trim();
                     csvContent += `"${id}","${date}","${cliente}",${total},"${estado}"\n`;
                 }
             });
             
-            csvContent += "\n--- GASTOS OPERATIVOS ---\nFecha,Concepto,Tipo,Monto\n";
+            csvContent += "\n--- GASTOS OPERATIVOS ---\nFecha,Ref,Concepto,Tipo,Monto\n";
             const gt = document.getElementById('tbl-gastos');
             gt.querySelectorAll('tr').forEach(tr => {
                 const tds = tr.querySelectorAll('td');
-                if(tds.length === 4) {
-                    const date = tds[0].innerText;
-                    const concepto = tds[1].innerText.replace(/"/g, '""');
-                    const tipo = tds[2].innerText;
-                    const monto = tds[3].innerText.replace(/["Q,]/g, '').trim();
-                    csvContent += `"${date}","${concepto}","${tipo}",${monto}\n`;
+                if(tds.length === 6) {
+                    const date = tds[0].innerText.trim();
+                    const ref = tds[1].innerText.trim();
+                    const concepto = tds[2].innerText.replace(/"/g, '""').trim();
+                    const tipo = tds[3].innerText.trim();
+                    const monto = tds[4].innerText.replace(/["Q,]/g, '').trim();
+                    csvContent += `"${date}","${ref}","${concepto}","${tipo}",${monto}\n`;
                 }
             });
             
-            const encodedUri = encodeURI(csvContent);
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
+            link.setAttribute("href", url);
             link.setAttribute("download", `Reporte_Finanzas_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            showToast("Finanzas Exportadas", "success");
+            URL.revokeObjectURL(url);
+            showToast("Reporte Financiero Exportado", "success");
         };
 
         window.renderClientes = function renderClientes() {
@@ -2952,7 +2972,7 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
         };
         
         window.exportClientesCSV = () => {
-            let csvContent = "data:text/csv;charset=utf-8,Cliente,Email,Telefono,Tickets Acumulados,Total Comprado\n";
+            let csvContent = "Cliente,Email,Telefono,Tickets Acumulados,Total Comprado\n";
             const tc = document.getElementById('tbl-clientes');
             tc.querySelectorAll('tr').forEach(tr => {
                 const tds = tr.querySelectorAll('td');
@@ -2967,13 +2987,15 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
                 }
             });
             
-            const encodedUri = encodeURI(csvContent);
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
+            link.setAttribute("href", url);
             link.setAttribute("download", `Reporte_Clientes_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(url);
             showToast("Directorio de Clientes Exportado", "success");
         };
 
