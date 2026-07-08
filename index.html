@@ -345,10 +345,15 @@
                 <div id="tab-fin" class="tab-content hidden-view animate-fade w-full">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div class="flex flex-wrap items-center gap-3">
-                            <input type="date" id="fin-date-start" onchange="renderFinanzas()" oninput="renderFinanzas()" class="input-base w-auto text-sm" placeholder="Inicio">
-                            <span class="text-gray-400 font-bold">-</span>
-                            <input type="date" id="fin-date-end" onchange="renderFinanzas()" oninput="renderFinanzas()" class="input-base w-auto text-sm" placeholder="Fin">
-                            <button onclick="document.getElementById('fin-date-start').value=''; document.getElementById('fin-date-end').value=''; renderFinanzas();" class="text-gray-400 hover:text-red-500 transition px-2" title="Limpiar Filtros"><i class="fa-solid fa-eraser"></i></button>
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-2">
+                                    <input type="date" id="fin-date-start" onchange="renderFinanzas()" oninput="renderFinanzas()" class="input-base w-auto text-sm" placeholder="Inicio">
+                                    <span class="text-gray-400 font-bold">-</span>
+                                    <input type="date" id="fin-date-end" onchange="renderFinanzas()" oninput="renderFinanzas()" class="input-base w-auto text-sm" placeholder="Fin">
+                                    <button onclick="document.getElementById('fin-date-start').value=''; document.getElementById('fin-date-end').value=''; renderFinanzas();" class="text-gray-400 hover:text-red-500 transition px-2" title="Limpiar Filtros"><i class="fa-solid fa-eraser"></i></button>
+                                </div>
+                                <span class="text-[10px] text-gray-400 italic"><i class="fa-solid fa-circle-info mr-1"></i>Por defecto carga los últimos 7 días. Ajusta las fechas para ver historiales antiguos.</span>
+                            </div>
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="exportFinanzasCSV()" class="admin-only bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-green-700 transition flex items-center gap-2 text-sm"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
@@ -1197,20 +1202,13 @@
             return 0;
         };
         
-        
-        
-
-        
-
-        // CONEXIÓN BACKEND
-        async function apiCall(action, payload = {}) {
+        async function apiCall(action, payload = {}, forceRefresh = false) {
             payload.action = action;
             payload.user = getActiveUserName();
             
-            // --- SEGURIDAD ESTRICTA FIREBASE ---
             if (!auth.currentUser) throw new Error("SERVER_ERROR: Usuario no autenticado en Firebase.");
             try {
-                payload.token = await auth.currentUser.getIdToken(false);
+                payload.token = await auth.currentUser.getIdToken(forceRefresh);
             } catch(e) {
                 throw new Error("SERVER_ERROR: Fallo al obtener el token de seguridad.");
             }
@@ -1219,11 +1217,18 @@
             try {
                 const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const data = await res.json();
-                if(data.status === 'error') throw new Error('SERVER_ERROR: ' + data.message);
+                
+                if(data.status === 'error') {
+                    if (data.message && data.message.includes("ACCESO DENEGADO") && !forceRefresh) {
+                        return await apiCall(action, payload, true);
+                    }
+                    throw new Error('SERVER_ERROR: ' + data.message);
+                }
                 return data;
             } catch (e) {
                 if (e.message && e.message.startsWith('SERVER_ERROR:')) {
                     showToast(e.message.replace('SERVER_ERROR: ', ''), 'error');
+                    throw e;
                 } else {
                     enqueueRequest(payload);
                     showToast('Sin conexión. Guardado localmente.', 'info');
@@ -1285,7 +1290,7 @@
             else badge.style.pointerEvents = 'auto';
         }
 
-        const syncData = window.syncData = async (silent = false) => {
+        const syncData = window.syncData = async (silent = false, forceRefresh = false) => {
             if (!silent) setLoading(true);
             try {
                 await processOfflineQueue();
@@ -1294,13 +1299,19 @@
                 let authParam = '';
                 if (auth.currentUser) {
                     try {
-                        const jwt = await auth.currentUser.getIdToken(false);
+                        const jwt = await auth.currentUser.getIdToken(forceRefresh);
                         authParam = `&token=${jwt}`;
                     } catch(e) { console.error("Error obteniendo token JWT", e); }
                 }
                 
                 const res = await fetch(`${SCRIPT_URL}?sheetName=all&_cb=${Date.now()}${authParam}`);
                 const data = await res.json();
+                
+                if (data.status === 'error' && data.message && data.message.includes('ACCESO DENEGADO') && !forceRefresh) {
+                    console.log("Token expirado en syncData, intentando refrescar...");
+                    return await syncData(silent, true);
+                }
+
                 if(data.status === 'success') {
                     console.log('Sync success, DB updated.');
                     DB = Object.assign(DB, data.data);
@@ -2158,7 +2169,7 @@
                     <td class="p-4 flex gap-2">
                         <button onclick="editProd('${p.ID_Producto}')" class="text-blue-500 hover:text-blue-700 transition" title="Editar"><i class="fa-solid fa-pen"></i></button>
                         <button onclick="openRestockModal('${p.ID_Producto}')" class="text-accent hover:text-darkaccent transition" title="Abastecer Stock"><i class="fa-solid fa-box-open"></i></button>
-                        <button onclick="deleteProd('${p.ID_Producto}')" class="text-red-500 hover:text-red-700 transition admin-only" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="deleteProd('${p.ID_Producto}')" class="text-red-500 hover:text-red-700 transition" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>`;
             });
@@ -3347,7 +3358,12 @@ const logTime = window.logTime = async (action) => {
                         document.getElementById('user-display').innerHTML += ' <span class="bg-red-100 text-red-800 text-[10px] px-2 py-0.5 rounded ml-2">Admin</span>';
                     }
 
-                    // 3. Cargar Datos
+                    // 3. Cargar Datos y setear fechas Finanzas por defecto
+                    const t = new Date();
+                    document.getElementById('fin-date-end').value = t.toISOString().split('T')[0];
+                    t.setDate(t.getDate() - 7);
+                    document.getElementById('fin-date-start').value = t.toISOString().split('T')[0];
+                    
                     await syncData();
                     logTime('Conexión_Global'); 
                     
