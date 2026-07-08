@@ -2158,6 +2158,7 @@
                     <td class="p-4 flex gap-2">
                         <button onclick="editProd('${p.ID_Producto}')" class="text-blue-500 hover:text-blue-700 transition" title="Editar"><i class="fa-solid fa-pen"></i></button>
                         <button onclick="openRestockModal('${p.ID_Producto}')" class="text-accent hover:text-darkaccent transition" title="Abastecer Stock"><i class="fa-solid fa-box-open"></i></button>
+                        <button onclick="deleteProd('${p.ID_Producto}')" class="text-red-500 hover:text-red-700 transition admin-only" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>`;
             });
@@ -2167,19 +2168,36 @@
         function renderCompras() {
             const tb = document.getElementById('tbl-compras');
             if(!tb) return;
-            tb.innerHTML = '';
-            (DB.Inventario_Compras || []).sort((a,b) => parseDateToInt(b.Fecha) - parseDateToInt(a.Fecha)).forEach(c => {
-                tb.innerHTML += `<tr class="hover:bg-gray-50">
-                    <td class="p-4 text-xs text-gray-500">${String(c.Fecha).replace('T', ' ').replace('.000Z', '').substring(0,16)}</td>
-                    <td class="p-4 font-mono text-[10px] text-gray-400">${c.ID_Compra}</td>
-                    <td class="p-4 font-bold text-primary">${c.Producto_Nombre} <span class="font-mono text-[10px] text-gray-400 block">${c.ID_Producto}</span></td>
-                    <td class="p-4 text-center font-black text-accent text-lg">+${c.Cantidad}</td>
-                    <td class="p-4 text-gray-600">${fMoney(c.Costo_Unitario)}</td>
-                    <td class="p-4 text-xs text-gray-600">${c.Proveedor || '-'}</td>
-                    <td class="p-4 text-xs text-gray-400">${c.Usuario || 'Sistema'}</td>
+            let html = '';
+            const cFiltered = (DB.Inventario_Compras || []).slice().reverse();
+            cFiltered.forEach(c => {
+                html += `<tr class="hover:bg-gray-50 border-b border-gray-100">
+                    <td class="p-3 text-xs text-gray-500 font-mono">${String(c.Fecha).replace('T',' ').replace('.000Z','')}</td>
+                    <td class="p-3 text-sm font-bold text-primary">${c.Producto_Nombre}</td>
+                    <td class="p-3 text-sm"><span class="bg-gray-100 px-2 py-1 rounded font-mono">${c.ID_Producto}</span></td>
+                    <td class="p-3 text-sm font-bold text-accent">+${c.Cantidad}</td>
+                    <td class="p-3 text-sm text-gray-600">${fMoney(c.Costo_Unitario)}</td>
+                    <td class="p-3 text-sm text-gray-600">${fMoney(Number(c.Cantidad)*Number(c.Costo_Unitario))}</td>
+                    <td class="p-3 text-xs text-gray-500">${c.Proveedor||'-'}</td>
+                    <td class="p-3 text-xs text-gray-500 uppercase">${c.Usuario||'-'}</td>
                 </tr>`;
             });
+            tb.innerHTML = html;
         }
+
+        const deleteProd = window.deleteProd = async (id) => {
+            if(!checkUserActive()) return;
+            const p = DB.Productos.find(x => x.ID_Producto === id);
+            if(!p) return;
+            if(!confirm(`¿Estás seguro de que deseas eliminar permanentemente el producto "${p.Nombre}"?\nEsta acción no se puede deshacer y el producto desaparecerá del inventario.`)) return;
+            
+            DB.Productos = DB.Productos.filter(x => x.ID_Producto !== id);
+            renderProductos();
+            showToast("Producto Eliminado permanentemente", "success");
+            
+            apiCall('crud', { sheetName: 'Productos', operation: 'delete', idField: 'ID_Producto', idValue: id });
+            logAudit('Inventario', 'Eliminar Producto', `Producto Eliminado: ${p.Nombre} (ID: ${id})`);
+        };
 
         const editProd = window.editProd = (id) => {
             if(!checkUserActive()) return;
