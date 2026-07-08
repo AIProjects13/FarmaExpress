@@ -66,6 +66,14 @@
 </head>
 <body class="antialiased h-screen flex overflow-hidden relative">
 
+    <!-- PANTALLA DE CARGA GLOBAL -->
+    <div id="global-loader" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gray-50 transition-opacity duration-500">
+        <img src="https://i.imgur.com/IoYI6XZ.png" alt="Logo" class="w-32 h-auto mb-8 animate-pulse">
+        <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h2 class="text-xl font-bold text-primary">Preparando tu entorno de trabajo...</h2>
+        <p class="text-sm text-gray-500 mt-2">Sincronizando de forma segura con la base de datos.</p>
+    </div>
+
     <!-- LOGIN -->
     <div id="auth-view" class="fixed inset-0 z-50 flex items-center justify-center bg-primary w-full h-full">
         <div class="bg-panel p-10 rounded-2xl shadow-2xl max-w-sm w-full">
@@ -1339,6 +1347,13 @@
                     applyConfig();
                     renderAll();
                     updateClientesDatalist();
+                    
+                    // Ocultar loader global si existe
+                    const gLoader = document.getElementById('global-loader');
+                    if (gLoader && gLoader.style.display !== 'none') {
+                        gLoader.style.opacity = '0';
+                        setTimeout(() => { gLoader.style.display = 'none'; }, 500);
+                    }
                     document.getElementById('sync-status').classList.replace('text-gray-400', 'text-accent');
                     setTimeout(() => document.getElementById('sync-status').classList.replace('text-accent', 'text-gray-400'), 2000);
                 } else { console.error('Backend Error:', data); if(!silent) showToast(data.error || 'Backend response invalid', 'error'); }
@@ -3353,6 +3368,9 @@ const logTime = window.logTime = async (action) => {
             }
 
             if (user) {
+                const gLoader = document.getElementById('global-loader');
+                if (gLoader) { gLoader.style.opacity = '1'; gLoader.style.display = 'flex'; }
+                
                 currentUser = user.email;
                 document.getElementById('user-display').innerText = user.email.split('@')[0];
                 document.getElementById('auth-view').classList.add('hidden-view'); 
@@ -3405,6 +3423,8 @@ const logTime = window.logTime = async (action) => {
                 document.getElementById('auth-view').classList.remove('hidden-view');
                 document.getElementById('btn-login').innerText = 'Ingresar'; 
                 document.getElementById('btn-login').disabled = false;
+                const gLoader = document.getElementById('global-loader');
+                if (gLoader) gLoader.style.display = 'none';
             }
         });
 
