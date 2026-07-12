@@ -96,8 +96,11 @@
 
     <!-- MAIN APP -->
     <div id="app-view" class="hidden-view flex w-full h-full">
+        <!-- SIDEBAR OVERLAY FOR MOBILE -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden" onclick="toggleSidebar()"></div>
+        
         <!-- SIDEBAR -->
-        <aside class="w-64 bg-primary text-white flex flex-col justify-between py-6 shadow-xl z-20">
+        <aside id="sidebar" class="absolute md:relative w-64 bg-primary text-white flex flex-col justify-between py-6 shadow-xl z-50 h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300">
             <div>
                 <div class="flex flex-col items-center gap-3 mb-8 px-6">
                     <div class="w-[106px] h-[106px] bg-white rounded-full flex items-center justify-center p-1 shadow-md flex-shrink-0">
@@ -153,8 +156,11 @@
         <!-- CONTENT -->
         <main class="flex-1 flex flex-col h-screen overflow-hidden bg-light relative">
             
-            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-10">
-                <h2 class="font-bold text-xl text-primary" id="top-title">Dashboard</h2>
+            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-8 z-10 flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="text-primary p-2 hover:bg-gray-100 rounded-lg"><i class="fa-solid fa-bars text-xl"></i></button>
+                    <h2 class="font-bold text-xl text-primary" id="top-title">Dashboard</h2>
+                </div>
                 <div class="flex items-center gap-4">
                     <span id="sync-status" class="text-xs font-bold text-gray-400"><i class="fa-solid fa-cloud"></i> Sincronizado</span>
                     <button onclick="syncData()" class="bg-gray-100 hover:bg-gray-200 text-primary p-2 rounded-lg transition" title="Forzar Sincronización"><i class="fa-solid fa-rotate-right"></i></button>
@@ -316,19 +322,19 @@
                         </div>
                         <div class="bg-white rounded-xl border border-gray-200 overflow-y-auto" style="max-height: 70vh;">
                             <table class="w-full text-left text-sm">
-                                <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs sticky top-0 z-10 shadow-sm" style="box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                <thead class="text-gray-500 uppercase text-xs shadow-sm">
                                     <tr>
-    <th class="p-4 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('nombre')">Cod / Nombre <i class="fa-solid fa-sort"></i></th>
-    <th class="p-4 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('marca')">Marca <i class="fa-solid fa-sort"></i></th>
-    <th class="p-4 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('categoria')">Categoría <i class="fa-solid fa-sort"></i></th>
-    <th class="p-4 admin-only cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('costo')">Costo <i class="fa-solid fa-sort"></i></th>
-    <th class="p-4 admin-only cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('margen')">Mrg % <i class="fa-solid fa-sort"></i></th>
-    <th class="p-4 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('precio')">P.Venta <i class="fa-solid fa-sort"></i></th>
-    <th class="p-4 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('stock')">Stock <i class="fa-solid fa-sort"></i></th>
-    <th class="p-4 admin-only cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('ctotal')">Costo Total <i class="fa-solid fa-sort"></i></th>
-    <th class="p-4 admin-only cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('vtotal')">Valor Venta <i class="fa-solid fa-sort"></i></th>
-    <th class="p-4 admin-only cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('ganancia')">Ganancia Esperada <i class="fa-solid fa-sort"></i></th>
-    <th class="p-4">Acciones</th>
+    <th class="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('nombre')">Cod / Nombre <i class="fa-solid fa-sort"></i></th>
+    <th class="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('marca')">Marca <i class="fa-solid fa-sort"></i></th>
+    <th class="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('categoria')">Categoría <i class="fa-solid fa-sort"></i></th>
+    <th class="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200 admin-only cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('costo')">Costo <i class="fa-solid fa-sort"></i></th>
+    <th class="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200 admin-only cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('margen')">Mrg % <i class="fa-solid fa-sort"></i></th>
+    <th class="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('precio')">P.Venta <i class="fa-solid fa-sort"></i></th>
+    <th class="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('stock')">Stock <i class="fa-solid fa-sort"></i></th>
+    <th class="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200 admin-only cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('ctotal')">Costo Total <i class="fa-solid fa-sort"></i></th>
+    <th class="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200 admin-only cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('vtotal')">Valor Venta <i class="fa-solid fa-sort"></i></th>
+    <th class="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200 admin-only cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('ganancia')">Ganancia Esperada <i class="fa-solid fa-sort"></i></th>
+    <th class="p-4 bg-gray-50 sticky top-0 z-10 border-b border-gray-200">Acciones</th>
 </tr>
                                 </thead>
                                 <tbody id="tbl-productos" class="divide-y divide-gray-100"></tbody>
@@ -457,9 +463,9 @@
                         </div>
                     </div>
                     
-                    <div class="flex gap-4 flex-1 overflow-hidden">
+                    <div class="flex flex-col xl:flex-row gap-4 flex-1 overflow-y-auto xl:overflow-hidden pb-8 xl:pb-0">
                     <!-- Bloque Izquierdo: Menú Categorías -->
-                    <div id="pos-left-panel" class="w-64 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden shrink-0">
+                    <div id="pos-left-panel" class="w-full xl:w-64 h-56 xl:h-auto bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col shrink-0">
                         <div class="p-4 border-b border-gray-200 bg-gray-50 shrink-0">
                             <h3 class="font-bold text-primary text-sm uppercase tracking-wider"><i class="fa-solid fa-list mr-2"></i> Secciones</h3>
                         </div>
@@ -469,7 +475,7 @@
                     </div>
 
                     <!-- Bloque Central: Productos o Paquetes -->
-                    <div id="pos-center-panel" class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden relative">
+                    <div id="pos-center-panel" class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-[500px] xl:min-h-0 relative">
                         <div class="p-4 border-b border-gray-200 flex items-center justify-between gap-4 shrink-0 bg-gray-50 sticky top-0 z-20">
                             <h3 class="font-bold text-primary text-lg flex items-center" id="pos-mid-title">
                                 <i class="fa-solid fa-boxes-packing mr-2"></i> Paquetes
@@ -490,7 +496,7 @@
                     </div>
                     
                     <!-- Bloque Derecho: Carrito -->
-                    <div id="pos-right-panel" class="w-[22rem] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col shrink-0">
+                    <div id="pos-right-panel" class="w-full xl:w-[22rem] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col shrink-0 min-h-[400px] xl:min-h-0">
                         <div class="p-4 border-b border-gray-200 bg-primary text-white rounded-t-xl shrink-0">
                             <h3 class="font-bold"><i class="fa-solid fa-cart-shopping mr-2"></i> Recibo de Venta</h3>
                         </div>
@@ -1250,8 +1256,10 @@
             
             const parts = s.split(' ')[0].split(/[\/-]/);
             if (parts.length === 3) {
-                if (parts[0].length === 4) return parseInt(`${parts[0]}${parts[1].padStart(2,'0')}${parts[2].padStart(2,'0')}${timeStr}`);
-                if (parts[2].length === 4) return parseInt(`${parts[2]}${parts[1].padStart(2,'0')}${parts[0].padStart(2,'0')}${timeStr}`);
+                let y = parts[2], m = parts[1], d = parts[0];
+                if (parts[0].length === 4) { y = parts[0]; m = parts[1]; d = parts[2]; }
+                else if (parts[2].length === 2) { y = '20' + parts[2]; }
+                return parseInt(`${y}${m.padStart(2,'0')}${d.padStart(2,'0')}${timeStr}`);
             }
             return 0;
         };
@@ -2935,7 +2943,7 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
                 if (vA < vB) return sortFacturas.asc ? -1 : 1;
                 if (vA > vB) return sortFacturas.asc ? 1 : -1;
                 return 0;
-            }).forEach(f => {
+            }).slice(0, 50).forEach(f => {
                 ft.innerHTML += `<tr class="hover:bg-gray-50">
                     <td class="p-3 font-mono text-gray-500 text-xs">${f.ID_Factura}</td>
                     <td class="p-3 text-xs">${formatDisplayDate(f.Fecha)}</td>
@@ -2963,7 +2971,7 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
                 if (vA < vB) return sortGastos.asc ? -1 : 1;
                 if (vA > vB) return sortGastos.asc ? 1 : -1;
                 return 0;
-            }).forEach(g => {
+            }).slice(0, 50).forEach(g => {
                 const match = (g.Concepto||'').match(/\[ID:\s*(.*?)\]/);
                 const ref = match ? match[1] : '-';
                 const conceptoDisplay = (g.Concepto||'').replace(/\[ID:\s*.*?\]/, '').trim();
@@ -3005,18 +3013,36 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
 
         window.exportVentasCSV = () => {
             let csvContent = "Recibo No.,Fecha,Cliente,Total,Estado\n";
-            const ft = document.getElementById('tbl-facturas');
-            ft.querySelectorAll('tr').forEach(tr => {
-                const tds = tr.querySelectorAll('td');
-                if(tds.length === 5) {
-                    const id = tds[0].innerText.trim();
-                    const date = tds[1].innerText.trim();
-                    const cliente = tds[2].innerText.trim().replace(/"/g, '""');
-                    const total = tds[3].innerText.replace(/["Q,]/g, '').trim();
-                    const estado = tds[4].innerText.trim();
-                    csvContent += `"${id}","${date}","${cliente}",${total},"${estado}"\n`;
-                }
+            const ds = document.getElementById('fin-date-start')?.value;
+            const de = document.getElementById('fin-date-end')?.value;
+            const checkDate = (dStr) => {
+                if(!ds && !de) return true;
+                if(!dStr) return false;
+                let dsN = parseDateToInt(ds);
+                let deN = parseDateToInt(de);
+                let dN = parseDateToInt(dStr);
+                if (dsN > 99999999) dsN = Math.floor(dsN / 1000000);
+                if (deN > 99999999) deN = Math.floor(deN / 1000000);
+                if (dN > 99999999) dN = Math.floor(dN / 1000000);
+                
+                if(!dsN && !deN) return true;
+                if(!dN) return false;
+                if(dsN && deN) return dN >= dsN && dN <= deN;
+                if(dsN) return dN >= dsN;
+                if(deN) return dN <= deN;
+                return true;
+            };
+            const filtered = (DB.Ventas_Facturas || []).filter(x => checkDate(x.Fecha));
+            
+            filtered.forEach(fac => {
+                const id = fac.ID_Factura || '';
+                const date = formatDisplayDate(fac.Fecha);
+                const cliente = (fac.Cliente_Nombre || '').replace(/"/g, '""');
+                const total = Number(fac.Total_Pagar || 0).toFixed(2);
+                const estado = fac.Estado_Pago || '';
+                csvContent += `"${id}","${date}","${cliente}",${total},"${estado}"\n`;
             });
+            
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
@@ -3030,18 +3056,37 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
 
         window.exportGastosCSV = () => {
             let csvContent = "Fecha,Ref,Concepto,Tipo,Monto\n";
-            const gt = document.getElementById('tbl-gastos');
-            gt.querySelectorAll('tr').forEach(tr => {
-                const tds = tr.querySelectorAll('td');
-                if(tds.length === 6) {
-                    const date = tds[0].innerText.trim();
-                    const ref = tds[1].innerText.trim();
-                    const concepto = tds[2].innerText.replace(/"/g, '""').trim();
-                    const tipo = tds[3].innerText.trim();
-                    const monto = tds[4].innerText.replace(/["Q,]/g, '').trim();
-                    csvContent += `"${date}","${ref}","${concepto}","${tipo}",${monto}\n`;
-                }
+            const ds = document.getElementById('fin-date-start')?.value;
+            const de = document.getElementById('fin-date-end')?.value;
+            const checkDate = (dStr) => {
+                if(!ds && !de) return true;
+                if(!dStr) return false;
+                let dsN = parseDateToInt(ds);
+                let deN = parseDateToInt(de);
+                let dN = parseDateToInt(dStr);
+                if (dsN > 99999999) dsN = Math.floor(dsN / 1000000);
+                if (deN > 99999999) deN = Math.floor(deN / 1000000);
+                if (dN > 99999999) dN = Math.floor(dN / 1000000);
+                
+                if(!dsN && !deN) return true;
+                if(!dN) return false;
+                if(dsN && deN) return dN >= dsN && dN <= deN;
+                if(dsN) return dN >= dsN;
+                if(deN) return dN <= deN;
+                return true;
+            };
+            const filtered = (DB.Gastos || []).filter(x => checkDate(x.Fecha));
+            
+            filtered.forEach(g => {
+                const date = formatDisplayDate(g.Fecha);
+                const match = (g.Concepto||'').match(/\[ID:\s*(.*?)\]/);
+                const ref = match ? match[1] : '-';
+                const concepto = (g.Concepto||'').replace(/\[ID:\s*.*?\]/, '').trim().replace(/"/g, '""');
+                const tipo = g.Tipo || '';
+                const monto = Number(g.Monto || 0).toFixed(2);
+                csvContent += `"${date}","${ref}","${concepto}","${tipo}",${monto}\n`;
             });
+            
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
@@ -3540,7 +3585,7 @@ const logTime = window.logTime = async (action) => {
 
                     // 3. Cargar Datos y setear fechas Finanzas por defecto
                     const t = new Date();
-                    document.getElementById('fin-date-end').value = t.toISOString().split('T')[0];
+                    document.getElementById('fin-date-end').value = '';
                     t.setDate(t.getDate() - 7);
                     document.getElementById('fin-date-start').value = t.toISOString().split('T')[0];
                     
@@ -3568,6 +3613,17 @@ const logTime = window.logTime = async (action) => {
             }
         });
 
+        window.toggleSidebar = () => {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('sidebar-overlay');
+            if(window.innerWidth < 768) {
+                if(sb) sb.classList.toggle('-translate-x-full');
+                if(ov) ov.classList.toggle('hidden');
+            } else {
+                if(sb) sb.classList.toggle('md:-ml-64');
+            }
+        };
+
         const handleLogout = window.handleLogout = () => { logTime('Desconexión_Global').then(() => signOut(auth)); };
 
         // TAB SWITCHER
@@ -3578,6 +3634,12 @@ const logTime = window.logTime = async (action) => {
             document.getElementById(e.currentTarget.dataset.target).classList.remove('hidden-view');
             e.currentTarget.classList.add('bg-accent'); e.currentTarget.classList.replace('text-gray-300','text-primary');
             document.getElementById('top-title').innerText = e.currentTarget.innerText;
+            
+            if(window.innerWidth < 768 && window.toggleSidebar) {
+                const sb = document.getElementById('sidebar');
+                if(sb && !sb.classList.contains('-translate-x-full')) toggleSidebar();
+            }
+
             try {
                 if(e.currentTarget.dataset.target === 'tab-dash') renderDashboard();
                 if(e.currentTarget.dataset.target === 'tab-audit') renderAudit();
