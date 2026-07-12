@@ -186,6 +186,12 @@
                         </div>
                     </div>
                     
+                    <div class="flex items-center gap-4 mb-4 text-sm font-bold bg-gray-50 p-2 rounded-lg border border-gray-200">
+                        <span class="text-gray-500">Incluir en Gráfica:</span>
+                        <label class="flex items-center gap-2 cursor-pointer text-green-600"><input type="checkbox" id="chk-ingresos" checked onchange="toggleChartSource()"> Ingresos</label>
+                        <label class="flex items-center gap-2 cursor-pointer text-red-600"><input type="checkbox" id="chk-gastos" checked onchange="toggleChartSource()"> Gastos</label>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                         <!-- Conteo Ventas -->
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -287,6 +293,7 @@
 
                 <!-- 3. INVENTARIO -->
                 <div id="tab-inv" class="tab-content hidden-view animate-fade w-full">
+                    <div id="inv-summary" class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6 text-sm"></div>
                     <div class="flex gap-4 border-b border-gray-200 mb-6">
                         <button onclick="setInvSub('productos')" class="inv-sub font-bold text-primary border-b-2 border-primary pb-2 px-2">Productos</button>
                         <button onclick="setInvSub('categorias')" class="inv-sub font-bold text-gray-400 pb-2 px-2 hover:text-primary">Categorías</button>
@@ -302,11 +309,14 @@
                                     <input type="text" id="srch-prod" class="input-base pl-9 text-sm py-2" placeholder="Buscar por Nombre, Marca, Código o Categoría..." oninput="renderProductos()">
                                 </div>
                             </div>
-                            <button onclick="openNewProdModal()" class="btn-accent text-sm py-2"><i class="fa-solid fa-plus"></i> Nuevo Prod.</button>
+                            <div class="flex items-center gap-2">
+                                <button onclick="exportInventarioCSV()" class="admin-only bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-green-700 transition flex items-center gap-2 text-sm"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
+                                <button onclick="openNewProdModal()" class="btn-accent text-sm py-2"><i class="fa-solid fa-plus"></i> Nuevo Prod.</button>
+                            </div>
                         </div>
-                        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                        <div class="bg-white rounded-xl border border-gray-200 overflow-y-auto" style="max-height: 70vh;">
                             <table class="w-full text-left text-sm">
-                                <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs sticky top-0 z-10 shadow-sm">
+                                <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs sticky top-0 z-10 shadow-sm" style="box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                                     <tr>
     <th class="p-4 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('nombre')">Cod / Nombre <i class="fa-solid fa-sort"></i></th>
     <th class="p-4 cursor-pointer hover:bg-gray-200" onclick="toggleSortProductos('marca')">Marca <i class="fa-solid fa-sort"></i></th>
@@ -365,7 +375,8 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="fetchFullHistory()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition flex items-center gap-2 text-sm"><i class="fa-solid fa-cloud-arrow-down"></i> Cargar Todo</button>
-                            <button onclick="exportFinanzasCSV()" class="admin-only bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-green-700 transition flex items-center gap-2 text-sm"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
+                            <button onclick="exportVentasCSV()" class="admin-only bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-green-700 transition flex items-center gap-2 text-sm"><i class="fa-solid fa-file-csv"></i> Exportar Ventas</button>
+                            <button onclick="exportGastosCSV()" class="admin-only bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-red-700 transition flex items-center gap-2 text-sm"><i class="fa-solid fa-file-csv"></i> Exportar Gastos</button>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -459,7 +470,7 @@
 
                     <!-- Bloque Central: Productos o Paquetes -->
                     <div id="pos-center-panel" class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden relative">
-                        <div class="p-4 border-b border-gray-200 flex items-center justify-between gap-4 shrink-0 bg-gray-50">
+                        <div class="p-4 border-b border-gray-200 flex items-center justify-between gap-4 shrink-0 bg-gray-50 sticky top-0 z-20">
                             <h3 class="font-bold text-primary text-lg flex items-center" id="pos-mid-title">
                                 <i class="fa-solid fa-boxes-packing mr-2"></i> Paquetes
                             </h3>
@@ -1117,8 +1128,18 @@
         let activeAppUser = null; // Usuario seleccionado (PIN)
         let cart = [];
         let dashFilter = 'hoy';
+        let chartIncludeIngresos = true;
+        let chartIncludeGastos = true;
         let mainChartInstance = null;
         let activePosCategory = 'PAQUETES'; // Iniciar por defecto en paquetes
+
+        window.toggleChartSource = () => {
+            const chkIngresos = document.getElementById('chk-ingresos');
+            const chkGastos = document.getElementById('chk-gastos');
+            if(chkIngresos) chartIncludeIngresos = chkIngresos.checked;
+            if(chkGastos) chartIncludeGastos = chkGastos.checked;
+            renderDashboard();
+        };
 
         // Nombre de usuario dinámico para Logs y Timestamps
         const getActiveUserName = () => activeAppUser ? `${activeAppUser.Nombre} ${activeAppUser.Apellido}` : (currentUser || 'Sistema');
@@ -1181,11 +1202,29 @@
             const DD = String(gt.getDate()).padStart(2, '0');
             const MM = String(gt.getMonth() + 1).padStart(2, '0');
             const YYYY = gt.getFullYear();
-            if (dateOnly) return `${DD}/${MM}/${YYYY}`;
+            if (dateOnly) return `${YYYY}-${MM}-${DD}`;
             const hh = String(gt.getHours()).padStart(2, '0');
             const mm = String(gt.getMinutes()).padStart(2, '0');
             const ss = String(gt.getSeconds()).padStart(2, '0');
-            return `${DD}/${MM}/${YYYY} ${hh}:${mm}:${ss}`;
+            return `${YYYY}-${MM}-${DD} ${hh}:${mm}:${ss}`;
+        };
+
+        const formatDisplayDate = window.formatDisplayDate = (isoStr) => {
+            if(!isoStr) return '--';
+            const s = String(isoStr);
+            if(s.includes('T')) {
+                const d = new Date(s);
+                if(!isNaN(d)) {
+                    const DD = String(d.getDate()).padStart(2, '0');
+                    const MM = String(d.getMonth() + 1).padStart(2, '0');
+                    const YYYY = d.getFullYear();
+                    const hh = String(d.getHours()).padStart(2, '0');
+                    const mm = String(d.getMinutes()).padStart(2, '0');
+                    const ss = String(d.getSeconds()).padStart(2, '0');
+                    return `${YYYY}-${MM}-${DD} ${hh}:${mm}:${ss}`;
+                }
+            }
+            return s;
         };
 
         const parseDateToInt = window.parseDateToInt = (dateStr) => {
@@ -1587,7 +1626,7 @@
             if (dN > 99999999) dN = Math.floor(dN / 1000000); // Remove 6-digit time if present
             const y = Math.floor(dN / 10000);
             const m = String(Math.floor((dN % 10000) / 100)).padStart(2, '0');
-            const d = String(dN % 100).padStart(2, '0');
+            const d = String(dN % 10).padStart(2, '0');
             
             if (grouping === 'month') {
                 return `${y}-${m}`;
@@ -1810,13 +1849,13 @@
                 axisLength = 12;
             }
 
-            let profitsByYear = {}; 
-            
-            function addProfit(dateStr, amount) {
+            let dataByYear = {};
+
+            function addFinancialData(dateStr, type, amount) {
                 if (!dateStr) return;
                 const d = new Date(String(dateStr).split('T')[0] + 'T12:00:00');
                 const y = d.getFullYear();
-                if (!profitsByYear[y]) profitsByYear[y] = Array(axisLength).fill(0);
+                if (!dataByYear[y]) dataByYear[y] = Array(axisLength).fill(0);
                 
                 let idx = -1;
                 if (dashFilter === 'hoy') {
@@ -1835,58 +1874,61 @@
                 }
                 
                 if (idx !== -1) {
-                    profitsByYear[y][idx] += amount;
+                    if(type === 'ingreso') dataByYear[y][idx] += amount;
+                    else if (type === 'gasto') dataByYear[y][idx] -= amount;
                 }
             }
 
-            (DB.Ventas_Facturas || []).forEach(f => {
-                addProfit(f.Fecha, Number(f.Total_Pagar||0));
-            });
-
-            (DB.Gastos || []).forEach(g => {
-                addProfit(g.Fecha, -Number(g.Monto||0));
-            });
-
-            (DB.Productos || []).forEach(p => {
-                if(!p.Creado_En) return;
-                let soldQty = 0;
-                (DB.Ventas_Facturas || []).forEach(fac => {
-                    try {
-                        const items = JSON.parse(fac.Items_JSON || '[]');
-                        items.forEach(i => { if (i.id === p.ID_Producto) soldQty += Number(i.cantidad || 0); });
-                    } catch(e) {}
+            if (chartIncludeIngresos) {
+                (DB.Ventas_Facturas || []).forEach(f => {
+                    addFinancialData(f.Fecha, 'ingreso', Number(f.Total_Pagar||0));
                 });
-                const totalPurchased = Number(p.Existencias || 0) + soldQty;
-                
-                let loggedQty = 0;
-                const prefix = `Ingreso de inventario: ${p.Nombre} (`;
+            }
+
+            if (chartIncludeGastos) {
                 (DB.Gastos || []).forEach(g => {
-                    if (g.Tipo === 'Mercancía' && g.Concepto.startsWith(prefix)) {
-                        const match = g.Concepto.match(/\((\d+)\s*unds\)/);
-                        if (match) loggedQty += Number(match[1]);
+                    addFinancialData(g.Fecha, 'gasto', Number(g.Monto||0));
+                });
+
+                (DB.Productos || []).forEach(p => {
+                    if(!p.Creado_En) return;
+                    let soldQty = 0;
+                    (DB.Ventas_Facturas || []).forEach(fac => {
+                        try {
+                            const items = JSON.parse(fac.Items_JSON || '[]');
+                            items.forEach(i => { if (i.id === p.ID_Producto) soldQty += Number(i.cantidad || 0); });
+                        } catch(e) {}
+                    });
+                    const totalPurchased = Number(p.Existencias || 0) + soldQty;
+                    let loggedQty = 0;
+                    const prefix = `Ingreso de inventario: ${p.Nombre} (`;
+                    (DB.Gastos || []).forEach(g => {
+                        if (g.Tipo === 'Mercancía' && g.Concepto.startsWith(prefix)) {
+                            const match = g.Concepto.match(/\((\d+)\s*unds\)/);
+                            if (match) loggedQty += Number(match[1]);
+                        }
+                    });
+                    const missingQty = totalPurchased - loggedQty;
+                    if (missingQty > 0) {
+                        addFinancialData(p.Creado_En, 'gasto', (missingQty * Number(p.Costo_Compra || 0)));
                     }
                 });
-                
-                const missingQty = totalPurchased - loggedQty;
-                if (missingQty > 0) {
-                    addProfit(p.Creado_En, -(missingQty * Number(p.Costo_Compra || 0)));
-                }
-            });
+            }
 
-            const currentYearData = profitsByYear[cy] || Array(axisLength).fill(0);
+            const currentYearData = dataByYear[cy] || Array(axisLength).fill(0);
             const bgColors = currentYearData.map(v => v >= 0 ? '#00D1FF' : '#ea580c'); 
 
             let datasets = [
-                { label: `Ganancia ${cy}`, type: 'bar', data: currentYearData, backgroundColor: bgColors, borderRadius: 4, order: 2 }
+                { label: `Balance ${cy}`, type: 'bar', data: currentYearData, backgroundColor: bgColors, borderRadius: 4, order: 2 }
             ];
 
-            const pastYears = Object.keys(profitsByYear).filter(y => Number(y) < cy).sort((a,b) => b - a);
+            const pastYears = Object.keys(dataByYear).filter(y => Number(y) < cy).sort((a,b) => b - a);
             
             pastYears.forEach((y, i) => {
                 const alpha = Math.max(0.2, 0.9 - (i * 0.2));
                 const color = `rgba(0, 0, 0, ${alpha})`;
                 datasets.push({
-                    label: `Ganancia ${y}`, type: 'line', data: profitsByYear[y],
+                    label: `Balance ${y}`, type: 'line', data: dataByYear[y],
                     borderColor: color, 
                     backgroundColor: color,
                     pointBackgroundColor: color,
@@ -1904,7 +1946,21 @@
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } } },
+                    plugins: { 
+                        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        label += 'Q ' + context.parsed.y.toLocaleString();
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
                     scales: {
                         y: { beginAtZero: true, grid: { borderDash: [4, 4] }, ticks: { callback: (val) => 'Q ' + val } },
                         x: { grid: { display: false } }
@@ -2140,6 +2196,41 @@
             
             let html = '';
             let filtered = applyProductFilter(q);
+            
+            let stk = 0, cv = 0, vv = 0;
+            filtered.forEach(p => {
+                const s = Number(p.Existencias || 0);
+                const cu = Number(p.Costo_Compra || 0);
+                const pu = Number(p.Precio_Venta || 0);
+                stk += s; cv += (s * cu); vv += (s * pu);
+            });
+            const ge = vv - cv;
+            const sumEl = document.getElementById('inv-summary');
+            if(sumEl) {
+                sumEl.innerHTML = `
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                        <p class="text-[10px] text-gray-500 uppercase font-bold mb-1">Productos Únicos</p>
+                        <p class="text-lg font-black text-gray-700">${filtered.length}</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                        <p class="text-[10px] text-gray-500 uppercase font-bold mb-1">Stock Total</p>
+                        <p class="text-lg font-black text-primary">${stk.toLocaleString()} unds</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm admin-only">
+                        <p class="text-[10px] text-gray-500 uppercase font-bold mb-1">Costo Total (Inversión)</p>
+                        <p class="text-lg font-black text-red-600">${fMoney(cv)}</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm admin-only">
+                        <p class="text-[10px] text-gray-500 uppercase font-bold mb-1">Ingreso Esperado</p>
+                        <p class="text-lg font-black text-green-600">${fMoney(vv)}</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm admin-only">
+                        <p class="text-[10px] text-gray-500 uppercase font-bold mb-1">Ganancia Esperada</p>
+                        <p class="text-lg font-black text-blue-600">${fMoney(ge)}</p>
+                    </div>
+                `;
+            }
+
             filtered.sort((a,b) => {
                 let vA, vB;
                 const cTotalA = Number(a.Costo_Compra || 0) * Number(a.Existencias || 0);
@@ -2210,7 +2301,7 @@
             });
             
             if (filtered.length > 50) {
-                html += `<tr><td colspan="9" class="p-4 text-center text-gray-500 italic"><i class="fa-solid fa-circle-info mr-1"></i>Mostrando los primeros 50 resultados de ${filtered.length}. Usa la barra de búsqueda para encontrar productos específicos.</td></tr>`;
+                html += `<tr><td colspan="11" class="p-4 text-center text-gray-500 italic"><i class="fa-solid fa-circle-info mr-1"></i>Mostrando los primeros 50 resultados de ${filtered.length}. Usa la barra de búsqueda para encontrar productos específicos.</td></tr>`;
             }
             
             tb.innerHTML = html;
@@ -2763,7 +2854,7 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
             document.getElementById('rec-fact-id').innerText = fac.ID_Factura;
             document.getElementById('rec-pat').innerText = `${fac.Cliente_Nombre} (NIT: ${fac.Cliente_NIT})`;
             document.getElementById('rec-doc').innerText = fac.Cajero || 'Admin';
-            document.getElementById('rec-date').innerText = String(fac.Fecha).replace('T', ' ').replace('.000Z', '');
+            document.getElementById('rec-date').innerText = formatDisplayDate(fac.Fecha);
             document.getElementById('rec-metodo').innerText = fac.Metodo_Pago || metodoPago;
             document.getElementById('rec-entrega').innerText = fac.Tipo_Entrega || 'En Farmacia';
             
@@ -2847,7 +2938,7 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
             }).forEach(f => {
                 ft.innerHTML += `<tr class="hover:bg-gray-50">
                     <td class="p-3 font-mono text-gray-500 text-xs">${f.ID_Factura}</td>
-                    <td class="p-3 text-xs">${String(f.Fecha).replace('T', ' ').replace('.000Z', '')}</td>
+                    <td class="p-3 text-xs">${formatDisplayDate(f.Fecha)}</td>
                     <td class="p-3 font-bold text-sm text-primary">${f.Cliente_Nombre} ${f.Cliente_Apellido||''}</td>
                     <td class="p-3 text-sm"><span class="font-black text-primary">${fMoney(f.Total_Pagar)}</span></td>
                     <td class="p-3"><span class="px-2 py-1 text-[10px] font-bold uppercase rounded ${f.Estatus==='Cancelado'?'bg-red-100 text-red-600':'bg-accent/20 text-darkaccent'}">${f.Estatus || 'Completado'}</span></td>
@@ -2878,7 +2969,7 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
                 const conceptoDisplay = (g.Concepto||'').replace(/\[ID:\s*.*?\]/, '').trim();
 
                 gt.innerHTML += `<tr class="hover:bg-gray-50">
-                    <td class="p-3 text-xs text-gray-500">${String(g.Fecha).replace('T', ' ').replace('.000Z', '')}</td>
+                    <td class="p-3 text-xs text-gray-500">${formatDisplayDate(g.Fecha)}</td>
                     <td class="p-3 font-mono text-[10px] text-gray-400">${ref}</td>
                     <td class="p-3 font-bold text-sm text-primary">${conceptoDisplay}</td>
                     <td class="p-3 text-xs uppercase text-gray-500">${g.Tipo}</td>
@@ -2900,7 +2991,7 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
                     return vB - vA;
                 }).forEach(c => {
                     ct.innerHTML += `<tr class="hover:bg-gray-50">
-                        <td class="p-3 text-xs text-gray-500 font-mono"><div class="font-bold text-gray-700">${c.id}</div>${String(c.fecha_registro).replace('T', ' ').replace('.000Z', '')}</td>
+                        <td class="p-3 text-xs text-gray-500 font-mono"><div class="font-bold text-gray-700">${c.id}</div>${formatDisplayDate(c.fecha_registro)}</td>
                         <td class="p-3 text-sm font-bold text-primary">${c.mes_año}</td>
                         <td class="p-3 text-right font-black text-gray-600">${fMoney(c.total_recaudado)}</td>
                         <td class="p-3 text-right font-black text-blue-600">${fMoney(c.base_caja_sencillo)}</td>
@@ -2912,8 +3003,8 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
             }
         }
 
-        window.exportFinanzasCSV = () => {
-            let csvContent = "--- RECIBOS Y COBROS ---\nRecibo No.,Fecha,Cliente,Total,Estado\n";
+        window.exportVentasCSV = () => {
+            let csvContent = "Recibo No.,Fecha,Cliente,Total,Estado\n";
             const ft = document.getElementById('tbl-facturas');
             ft.querySelectorAll('tr').forEach(tr => {
                 const tds = tr.querySelectorAll('td');
@@ -2926,8 +3017,19 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
                     csvContent += `"${id}","${date}","${cliente}",${total},"${estado}"\n`;
                 }
             });
-            
-            csvContent += "\n--- GASTOS OPERATIVOS ---\nFecha,Ref,Concepto,Tipo,Monto\n";
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Reporte_Ventas_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Reporte Ventas Exportado", "success");
+        };
+
+        window.exportGastosCSV = () => {
+            let csvContent = "Fecha,Ref,Concepto,Tipo,Monto\n";
             const gt = document.getElementById('tbl-gastos');
             gt.querySelectorAll('tr').forEach(tr => {
                 const tds = tr.querySelectorAll('td');
@@ -2940,17 +3042,47 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
                     csvContent += `"${date}","${ref}","${concepto}","${tipo}",${monto}\n`;
                 }
             });
-            
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.setAttribute("href", url);
-            link.setAttribute("download", `Reporte_Finanzas_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute("download", `Reporte_Gastos_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            showToast("Reporte Financiero Exportado", "success");
+            showToast("Reporte Gastos Exportado", "success");
+        };
+
+        window.exportInventarioCSV = () => {
+            let csvContent = "Cod/Nombre,Marca,Categoria,Costo,Margen,Precio Venta,Stock,Costo Total,Valor Venta,Ganancia Esperada\n";
+            const q = (document.getElementById('srch-prod').value || '').toLowerCase();
+            const filtered = applyProductFilter(q);
+            
+            filtered.forEach(p => {
+                const catObj = (DB.Categorias || []).find(c => c.ID_Categoria === p.ID_Categoria);
+                const catName = catObj ? catObj.Nombre_Categoria : p.ID_Categoria;
+                const nombre = (p.Nombre || '').replace(/\n/g, ' - ').replace(/"/g, '""');
+                const marca = (p.Marca || '').replace(/"/g, '""');
+                const cat = (catName || '').replace(/"/g, '""');
+                const costo = Number(p.Costo_Compra || 0);
+                const mrg = Number(p.Margen || 0);
+                const precio = Number(p.Precio_Venta || 0);
+                const stock = Number(p.Existencias || 0);
+                const ct = stock * costo;
+                const vv = stock * precio;
+                const ge = vv - ct;
+                csvContent += `"${nombre}","${marca}","${cat}",${costo},${mrg},${precio},${stock},${ct},${vv},${ge}\n`;
+            });
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Reporte_Inventario_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Reporte Inventario Exportado", "success");
         };
 
         window.renderClientes = function renderClientes() {
@@ -3033,7 +3165,7 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
                     <div>
                         <p class="font-bold text-primary">${f.ID_Factura}</p>
-                        <p class="text-xs text-gray-500">${String(f.Fecha).replace('T', ' ').replace('.000Z', '')} | Cajero: ${f.Cajero}</p>
+                        <p class="text-xs text-gray-500">${formatDisplayDate(f.Fecha)} | Cajero: ${f.Cajero}</p>
                     </div>
                     <div class="text-right">
                         <p class="font-black text-lg text-accent">${fMoney(f.Total_Pagar)}</p>
@@ -3143,9 +3275,9 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
                         </div>
                         <div class="mt-1 text-gray-400">Creado por: ${t.Creado_Por || 'Sistema'}</div>
                         <div class="flex justify-between mt-1 pt-1 border-t border-gray-100 ${stateColor}">
-                            <span>IN: ${String(creationDate).replace('T', ' ').replace('.000Z', '')}</span>
-                            ${t.Estado === 'En Proceso' && procDate ? `<span>PROCESO: ${String(procDate).replace('T', ' ').replace('.000Z', '')}</span>` : ''}
-                            ${t.Estado === 'Completada' && compDate ? `<span>FIN: ${String(compDate).replace('T', ' ').replace('.000Z', '')}</span>` : ''}
+                            <span>IN: ${formatDisplayDate(creationDate)}</span>
+                            ${t.Estado === 'En Proceso' && procDate ? `<span>PROCESO: ${formatDisplayDate(procDate)}</span>` : ''}
+                            ${t.Estado === 'Completada' && compDate ? `<span>FIN: ${formatDisplayDate(compDate)}</span>` : ''}
                         </div>
                     </div>
                 </div>`;
@@ -3255,7 +3387,7 @@ const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction =
                 String(l.Usuario||'').toLowerCase().includes(q) ||
                 String(l.Timestamp||'').toLowerCase().includes(q)
             ).sort((a,b)=>parseDateToInt(b.Timestamp) - parseDateToInt(a.Timestamp)).forEach(l => {
-                tb.innerHTML += `<tr class="hover:bg-gray-50"><td class="p-3 text-xs text-gray-500">${String(l.Timestamp).replace('T', ' ').replace('.000Z', '')}</td><td class="p-3 font-bold text-xs uppercase text-primary">${l.Modulo}</td><td class="p-3 text-accent font-bold">${l.Accion}</td><td class="p-3 text-xs text-gray-700">${l.Detalles}</td><td class="p-3 text-xs text-gray-400">${l.Usuario}</td></tr>`;
+                tb.innerHTML += `<tr class="hover:bg-gray-50"><td class="p-3 text-xs text-gray-500">${formatDisplayDate(l.Timestamp)}</td><td class="p-3 font-bold text-xs uppercase text-primary">${l.Modulo}</td><td class="p-3 text-accent font-bold">${l.Accion}</td><td class="p-3 text-xs text-gray-700">${l.Detalles}</td><td class="p-3 text-xs text-gray-400">${l.Usuario}</td></tr>`;
             });
             if(!tb.innerHTML) tb.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">No hay registros de auditora.</td></tr>`;
         }
