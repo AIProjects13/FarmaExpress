@@ -222,15 +222,15 @@
                             <div class="grid grid-cols-3 gap-4 text-center items-center h-full pb-4">
                                 <div>
                                     <p class="text-[10px] uppercase text-gray-400 font-bold">Venta Total</p>
-                                    <p class="text-3xl font-bold text-primary mt-1" id="kpi-rent-ingreso">0.00</p>
+                                    <p class="text-3xl font-bold text-primary mt-1 truncate" id="kpi-rent-ingreso" title="0.00">0.00</p>
                                 </div>
                                 <div>
                                     <p class="text-[10px] uppercase text-gray-400 font-bold">Costo Mercancía</p>
-                                    <p class="text-3xl font-bold text-red-500 mt-1" id="kpi-rent-costo">0.00</p>
+                                    <p class="text-3xl font-bold text-red-500 mt-1 truncate" id="kpi-rent-costo" title="0.00">0.00</p>
                                 </div>
                                 <div class="border-l border-gray-100 pl-2">
                                     <p class="text-[10px] uppercase text-accent font-bold">Ganancia Bruta</p>
-                                    <p class="text-3xl font-black text-accent mt-1" id="kpi-rent-ganancia">0.00</p>
+                                    <p class="text-3xl font-black text-accent mt-1 truncate" id="kpi-rent-ganancia" title="0.00">0.00</p>
                                 </div>
                             </div>
                         </div>
@@ -239,16 +239,16 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                             <p class="text-xs text-gray-500 font-bold uppercase">Ventas Facturadas (<span class="dash-lbl">Mes</span>)</p>
-                            <p class="text-3xl font-black text-primary mt-1" id="kpi-ventas">0.00</p>
+                            <p class="text-3xl font-black text-primary mt-1 truncate" id="kpi-ventas" title="0.00">0.00</p>
                         </div>
                         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                             <p class="text-xs text-gray-500 font-bold uppercase">Gastos Totales (<span class="dash-lbl">Mes</span>)</p>
-                            <p class="text-3xl font-black text-red-500 mt-1" id="kpi-gastos">0.00</p>
+                            <p class="text-3xl font-black text-red-500 mt-1 truncate" id="kpi-gastos" title="0.00">0.00</p>
                             <p class="text-[10px] text-gray-400 mt-1">Costos mercancía + Egresos</p>
                         </div>
                         <div class="bg-primary p-6 rounded-xl shadow-sm border border-primary relative overflow-hidden">
                             <p class="text-xs text-accent font-bold uppercase">Utilidad Neta (<span class="dash-lbl">Mes</span>)</p>
-                            <p class="text-3xl font-black text-white mt-1" id="kpi-utilidad">0.00</p>
+                            <p class="text-3xl font-black text-white mt-1 truncate" id="kpi-utilidad" title="0.00">0.00</p>
                             <i class="fa-solid fa-wallet absolute -right-4 -bottom-4 text-6xl text-white opacity-10"></i>
                         </div>
                     </div>
@@ -354,7 +354,7 @@
                     <!-- Compras -->
                     <div id="inv-compras" class="inv-view hidden-view">
                         <h3 class="font-bold text-primary mb-4 text-xl">Historial de Compras y Abastecimiento</h3>
-                        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden h-[600px] overflow-y-auto">
+                        <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto h-[600px] overflow-y-auto">
                             <table class="w-full text-left text-sm">
                                 <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs sticky top-0 shadow-sm">
                                     <tr><th class="p-4">Fecha</th><th class="p-4">Compra ID</th><th class="p-4">Producto</th><th class="p-4 text-center">Cantidad</th><th class="p-4">Costo U.</th><th class="p-4">Proveedor/Notas</th><th class="p-4">Usuario</th></tr>
@@ -390,7 +390,7 @@
                             <div class="flex items-end mb-4 min-h-[76px]">
                                 <h3 class="font-bold text-primary text-xl mb-1">Recibos y Cobros</h3>
                             </div>
-                            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden h-[600px] overflow-y-auto">
+                            <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto h-[600px] overflow-y-auto">
                                 <table class="w-full text-left text-sm">
                                     <thead class="bg-gray-50 border-b text-gray-500 uppercase text-xs sticky top-0 shadow-sm">
                                         <tr>
@@ -413,7 +413,7 @@
                                     <button onclick="openNewGasto()" class="bg-primary text-white px-3 py-1.5 rounded text-sm hover:bg-gray-800 transition shadow-sm flex items-center justify-center gap-2"><i class="fa-solid fa-plus"></i> Registrar</button>
                                 </div>
                             </div>
-                            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden h-[600px] overflow-y-auto">
+                            <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto h-[600px] overflow-y-auto">
                                 <table class="w-full text-left text-sm">
                                     <thead class="bg-gray-50 border-b text-gray-500 uppercase text-xs sticky top-0 shadow-sm">
                                         <tr>
@@ -435,7 +435,7 @@
                         <div class="flex items-end mb-4 min-h-[40px]">
                             <h3 class="font-bold text-primary text-xl mb-1">Historial de Cierres de Caja</h3>
                         </div>
-                        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden h-[400px] overflow-y-auto">
+                        <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto h-[400px] overflow-y-auto">
                             <table class="w-full text-left text-sm">
                                 <thead class="bg-gray-50 border-b text-gray-500 uppercase text-xs sticky top-0 shadow-sm">
                                     <tr>
@@ -622,7 +622,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden h-[600px] overflow-y-auto">
+                    <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto h-[600px] overflow-y-auto">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-gray-50 border-b text-gray-500 uppercase text-xs sticky top-0 shadow-sm">
                                 <tr><th class="p-3">Fecha y Hora</th><th class="p-3">Módulo</th><th class="p-3">Acción</th><th class="p-3">Detalles</th><th class="p-3">Usuario</th></tr>
@@ -1634,7 +1634,7 @@
             if (dN > 99999999) dN = Math.floor(dN / 1000000); // Remove 6-digit time if present
             const y = Math.floor(dN / 10000);
             const m = String(Math.floor((dN % 10000) / 100)).padStart(2, '0');
-            const d = String(dN % 10).padStart(2, '0');
+            const d = String(dN % 100).padStart(2, '0');
             
             if (grouping === 'month') {
                 return `${y}-${m}`;
@@ -1739,16 +1739,16 @@
             const egresosTotales = gTotal;
             const util = vTotal - egresosTotales;
 
-            document.getElementById('kpi-ventas').innerText = fMoney(vTotal);
+            document.getElementById('kpi-ventas').innerText = fMoney(vTotal); document.getElementById('kpi-ventas').title = fMoney(vTotal);
             document.getElementById('kpi-gastos').innerText = fMoney(egresosTotales);
             document.getElementById('kpi-utilidad').innerText = fMoney(util);
 
             const rentGanancia = vTotal - rentCosto;
             
             if(document.getElementById('kpi-rent-ingreso')) {
-                document.getElementById('kpi-rent-ingreso').innerText = fMoney(vTotal);
-                document.getElementById('kpi-rent-costo').innerText = fMoney(rentCosto);
-                document.getElementById('kpi-rent-ganancia').innerText = fMoney(rentGanancia);
+                document.getElementById('kpi-rent-ingreso').innerText = fMoney(vTotal); document.getElementById('kpi-rent-ingreso').title = fMoney(vTotal);
+                document.getElementById('kpi-rent-costo').innerText = fMoney(rentCosto); document.getElementById('kpi-rent-costo').title = fMoney(rentCosto);
+                document.getElementById('kpi-rent-ganancia').innerText = fMoney(rentGanancia); document.getElementById('kpi-rent-ganancia').title = fMoney(rentGanancia);
                 
                 document.getElementById('cnt-ventas-hoy').innerText = DB.Ventas_Facturas.filter(f => isDateInPeriod(f.Fecha, 'hoy')).length;
                 document.getElementById('cnt-ventas-semana').innerText = DB.Ventas_Facturas.filter(f => isDateInPeriod(f.Fecha, 'semana')).length;
@@ -1861,7 +1861,13 @@
 
             function addFinancialData(dateStr, type, amount) {
                 if (!dateStr) return;
-                const d = new Date(String(dateStr).split('T')[0] + 'T12:00:00');
+                let dN = parseDateToInt(dateStr);
+                if (!dN) return;
+                if (dN > 99999999) dN = Math.floor(dN / 1000000);
+                const py = Math.floor(dN / 10000);
+                const pm = Math.floor((dN % 10000) / 100) - 1;
+                const pd = dN % 100;
+                const d = new Date(py, pm, pd, 12, 0, 0);
                 const y = d.getFullYear();
                 if (!dataByYear[y]) dataByYear[y] = Array(axisLength).fill(0);
                 
@@ -3677,6 +3683,11 @@ const logTime = window.logTime = async (action) => {
 </script>
 </body>
 </html>
+
+
+
+
+
 
 
 
