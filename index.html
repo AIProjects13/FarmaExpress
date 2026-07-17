@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -2470,14 +2470,56 @@
             (DB.Paquetes || []).forEach(p => {
                 let its = [];
                 try { its = JSON.parse(p.Productos_JSON||'[]'); } catch(e){}
-                l.innerHTML += `<div class="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm">
-                    <h4 class="font-bold text-primary">${p.Nombre_Paquete}</h4>
+                l.innerHTML += `<div class="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm relative group">
+                    <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="editPaquete('${p.ID_Paquete}')" class="text-blue-500 hover:text-blue-700 bg-white shadow p-1.5 rounded" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deletePaquete('${p.ID_Paquete}')" class="text-red-500 hover:text-red-700 bg-white shadow p-1.5 rounded" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <h4 class="font-bold text-primary pr-16">${p.Nombre_Paquete}</h4>
                     <p class="text-2xl font-black text-primary mt-1">${fMoney(p.Precio_Combo)}</p>
                     <ul class="text-xs text-gray-500 mt-2 space-y-1">${its.map(i=>`<li>- <b>${i.cantidad}x</b> ${i.name}</li>`).join('')}</ul>
                 </div>`;
             });
             if(!DB.Paquetes || !DB.Paquetes.length) l.innerHTML = '<p class="text-sm text-gray-400">No hay paquetes creados.</p>';
         }
+
+        window.editPaquete = (id) => {
+            if(!checkUserActive()) return;
+            const p = DB.Paquetes.find(x => x.ID_Paquete === id);
+            if(!p) return;
+            
+            document.getElementById('pkg-id').value = p.ID_Paquete;
+            document.getElementById('pkg-nombre').value = p.Nombre_Paquete;
+            
+            let items = [];
+            try { items = JSON.parse(p.Productos_JSON || '[]'); } catch(e){}
+            pkgTempItems = items;
+            renderPkgList();
+            
+            const totalOriginal = pkgTempItems.reduce((acc, i) => acc + (i.cantidad * i.precio), 0);
+            const finalPrice = p.Precio_Combo;
+            let desc = 0;
+            if (totalOriginal > 0) desc = ((totalOriginal - finalPrice) / totalOriginal) * 100;
+            document.getElementById('pkg-descuento').value = desc.toFixed(1);
+            
+            openModal('mod-paquete');
+            calcPkgFinalPrice(totalOriginal);
+        };
+
+        window.deletePaquete = async (id) => {
+            if(!checkUserActive()) return;
+            const p = DB.Paquetes.find(x => x.ID_Paquete === id);
+            if(!p) return;
+            if(!confirm(`¿Estás seguro de que deseas eliminar permanentemente el paquete "${p.Nombre_Paquete}"?`)) return;
+            
+            DB.Paquetes = DB.Paquetes.filter(x => x.ID_Paquete !== id);
+            renderPaquetes();
+            renderPosCatalog();
+            showToast("Paquete Eliminado permanentemente", "success");
+            
+            apiCall('crud', { sheetName: 'Paquetes', operation: 'delete', idField: 'ID_Paquete', idValue: id });
+            logAudit('Inventario', 'Eliminar Paquete', `Paquete: ${p.Nombre_Paquete} [${id}]`);
+        };
 
         // --- CAJA POS (Actualización Local Inmediata) ---
         const setPosCategory = window.setPosCategory = (id) => {
