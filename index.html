@@ -1197,9 +1197,27 @@
             event.target.classList.add('border-b-2','border-primary');
         };
 
+        window.addEventListener('error', (event) => {
+            console.error("Global Error:", event.error);
+            showToast(`Error: ${event.message}`, 'error');
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error("Unhandled Promise Rejection:", event.reason);
+            showToast(`Error (Promise): ${event.reason}`, 'error');
+        });
+
         const setLoading = (state) => {
             const l = document.getElementById('loader');
-            state ? l.classList.remove('hidden-view') : l.classList.add('hidden-view');
+            if (l) { state ? l.classList.remove('hidden-view') : l.classList.add('hidden-view'); }
+            
+            if (!state) {
+                const gl = document.getElementById('global-loader');
+                if (gl) {
+                    gl.style.opacity = '0';
+                    setTimeout(() => { gl.style.display = 'none'; }, 500);
+                }
+            }
         };
 
         const fMoney = n => 'Q ' + Number(n||0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -1366,7 +1384,7 @@
         const syncData = window.syncData = async (silent = false, forceRefresh = false, fullHistory = false) => {
             if (!silent) setLoading(true);
             try {
-                await processOfflineQueue();
+                processOfflineQueue().catch(e => console.error("Offline queue error:", e));
                 
                 // --- SEGURIDAD: Obtener Token JWT ---
                 let authParam = '';
@@ -2268,58 +2286,82 @@
                 if(vA > vB) return sortProductos.asc ? 1 : -1;
                 return 0;
             });
-            
-            const displayed = filtered.slice(0, 50);
-            displayed.forEach(p => {
-                const isCrit = Number(p.Existencias) <= Number(p.Alerta_Minimo);
-                const catObj = (DB.Categorias || []).find(c => c.ID_Categoria === p.ID_Categoria);
-                const catName = catObj ? catObj.Nombre_Categoria : 'Sin Categoría';
-                const cTotal = Number(p.Costo_Compra || 0) * Number(p.Existencias || 0);
-                const vTotal = Number(p.Precio_Venta || 0) * Number(p.Existencias || 0);
-                const gTotal = vTotal - cTotal;
 
-                let stockStr = `${Number(p.Existencias || 0).toFixed(2).replace(/\.00$/, '')}`;
-                if (p.Venta_Fraccionada === true || p.Venta_Fraccionada === 'true') {
-                    const totQ = Number(p.Existencias || 0);
-                    const cjs = Math.floor(totQ);
-                    const fC = Number(p.Fraccion_Cant || 1);
-                    const fracs = Math.round((totQ - cjs) * fC);
-                    const totalPieces = Math.round(totQ * fC);
-                    const typeLabel = p.Fraccion_Tipo ? p.Fraccion_Tipo.toLowerCase() + (p.Fraccion_Tipo.toLowerCase().endsWith('s') ? '' : 's') : 'fracciones';
-                    
-                    if (fracs > 0) {
-                        stockStr = `<span class="text-base">${cjs}</span> <span class="text-[10px] text-gray-500">cajas</span><br><span class="text-xs text-blue-600">${fracs}/${fC} abiertas</span><br><span class="text-[11px] text-gray-600 block mt-1 font-bold">Total: ${totalPieces} ${typeLabel}</span>`;
-                    } else {
-                        stockStr = `<span class="text-base">${cjs}</span> <span class="text-[10px] text-gray-500">cajas</span><br><span class="text-[11px] text-gray-600 block mt-1 font-bold">Total: ${totalPieces} ${typeLabel}</span>`;
-                    }
-                }
+            if (!window.renderProductos.renderId) window.renderProductos.renderId = 0;
+            window.renderProductos.renderId++;
+            const currentRenderId = window.renderProductos.renderId;
 
-                html += `<tr class="hover:bg-gray-50">
-                    <td class="p-4"><p class="font-bold text-primary">${p.Nombre}</p><span class="text-[10px] font-mono text-gray-400">${p.ID_Producto}</span></td>
-                    <td class="p-4 font-bold text-blue-600 text-xs">${p.Marca || '-'}</td>
-                    <td class="p-4"><span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded font-bold">${catName}</span></td>
-                    <td class="p-4 text-gray-600 admin-only">${fMoney(p.Costo_Compra)}</td><td class="p-4 text-gray-600 admin-only">${Number(p.Margen_Ganancia||0).toFixed(2)}%</td>
-                    <td class="p-4 font-black text-primary">
-                        ${fMoney(p.Precio_Venta)}
-                        ${(p.Venta_Fraccionada === true || p.Venta_Fraccionada === 'true') ? `<br><span class="text-[10px] text-blue-600 font-bold bg-blue-50 px-1 rounded" title="Precio Unitario (${p.Fraccion_Tipo})">${fMoney(p.Fraccion_Precio)}</span>` : ''}
-                    </td>
-                    <td class="p-4 font-bold ${isCrit?'text-red-500':'text-accent'}">${stockStr}</td>
-                    <td class="p-4 text-gray-600 admin-only">${fMoney(cTotal)}</td>
-                    <td class="p-4 text-gray-600 admin-only">${fMoney(vTotal)}</td>
-                    <td class="p-4 font-bold text-accent admin-only">${fMoney(gTotal)}</td>
-                    <td class="p-4 flex gap-2">
-                        <button onclick="editProd('${p.ID_Producto}')" class="text-blue-500 hover:text-blue-700 transition" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="openRestockModal('${p.ID_Producto}')" class="text-accent hover:text-darkaccent transition" title="Abastecer Stock"><i class="fa-solid fa-box-open"></i></button>
-                        <button onclick="deleteProd('${p.ID_Producto}')" class="text-red-500 hover:text-red-700 transition" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                </tr>`;
-            });
-            
-            if (filtered.length > 50) {
-                html += `<tr><td colspan="11" class="p-4 text-center text-gray-500 italic"><i class="fa-solid fa-circle-info mr-1"></i>Mostrando los primeros 50 resultados de ${filtered.length}. Usa la barra de búsqueda para encontrar productos específicos.</td></tr>`;
+            tb.innerHTML = '';
+            if (filtered.length === 0) {
+                tb.innerHTML = `<tr><td colspan="11" class="p-4 text-center text-gray-500 italic">No hay productos que coincidan con la búsqueda.</td></tr>`;
+                return;
             }
-            
-            tb.innerHTML = html;
+
+            let currentIdx = 0;
+            const chunkSize = 150; // Procesamos de 150 en 150 para no congelar la pantalla
+
+            const renderChunk = () => {
+                if (window.renderProductos.renderId !== currentRenderId) return; // Se cancela si se hizo otra búsqueda rápida
+                if (currentIdx >= filtered.length) return;
+
+                const end = Math.min(currentIdx + chunkSize, filtered.length);
+                let chunkHtml = '';
+
+                for (let i = currentIdx; i < end; i++) {
+                    const p = filtered[i];
+                    const isCrit = Number(p.Existencias) <= Number(p.Alerta_Minimo);
+                    const catObj = (DB.Categorias || []).find(c => c.ID_Categoria === p.ID_Categoria);
+                    const catName = catObj ? catObj.Nombre_Categoria : 'Sin Categoría';
+                    const cTotal = Number(p.Costo_Compra || 0) * Number(p.Existencias || 0);
+                    const vTotal = Number(p.Precio_Venta || 0) * Number(p.Existencias || 0);
+                    const gTotal = vTotal - cTotal;
+
+                    let stockStr = `${Number(p.Existencias || 0).toFixed(2).replace(/\.00$/, '')}`;
+                    if (p.Venta_Fraccionada === true || p.Venta_Fraccionada === 'true') {
+                        const totQ = Number(p.Existencias || 0);
+                        const cjs = Math.floor(totQ);
+                        const fC = Number(p.Fraccion_Cant || 1);
+                        const fracs = Math.round((totQ - cjs) * fC);
+                        const totalPieces = Math.round(totQ * fC);
+                        const typeLabel = p.Fraccion_Tipo ? p.Fraccion_Tipo.toLowerCase() + (p.Fraccion_Tipo.toLowerCase().endsWith('s') ? '' : 's') : 'fracciones';
+                        
+                        if (fracs > 0) {
+                            stockStr = `<span class="text-base">${cjs}</span> <span class="text-[10px] text-gray-500">cajas</span><br><span class="text-xs text-blue-600">${fracs}/${fC} abiertas</span><br><span class="text-[11px] text-gray-600 block mt-1 font-bold">Total: ${totalPieces} ${typeLabel}</span>`;
+                        } else {
+                            stockStr = `<span class="text-base">${cjs}</span> <span class="text-[10px] text-gray-500">cajas</span><br><span class="text-[11px] text-gray-600 block mt-1 font-bold">Total: ${totalPieces} ${typeLabel}</span>`;
+                        }
+                    }
+
+                    chunkHtml += `<tr class="hover:bg-gray-50">
+                        <td class="p-4"><p class="font-bold text-primary">${p.Nombre}</p><span class="text-[10px] font-mono text-gray-400">${p.ID_Producto}</span></td>
+                        <td class="p-4 font-bold text-blue-600 text-xs">${p.Marca || '-'}</td>
+                        <td class="p-4"><span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded font-bold">${catName}</span></td>
+                        <td class="p-4 text-gray-600 admin-only">${fMoney(p.Costo_Compra)}</td><td class="p-4 text-gray-600 admin-only">${Number(p.Margen_Ganancia||0).toFixed(2)}%</td>
+                        <td class="p-4 font-black text-primary">
+                            ${fMoney(p.Precio_Venta)}
+                            ${(p.Venta_Fraccionada === true || p.Venta_Fraccionada === 'true') ? `<br><span class="text-[10px] text-blue-600 font-bold bg-blue-50 px-1 rounded" title="Precio Unitario (${p.Fraccion_Tipo})">${fMoney(p.Fraccion_Precio)}</span>` : ''}
+                        </td>
+                        <td class="p-4 font-bold ${isCrit?'text-red-500':'text-accent'}">${stockStr}</td>
+                        <td class="p-4 text-gray-600 admin-only">${fMoney(cTotal)}</td>
+                        <td class="p-4 text-gray-600 admin-only">${fMoney(vTotal)}</td>
+                        <td class="p-4 font-bold text-accent admin-only">${fMoney(gTotal)}</td>
+                        <td class="p-4 flex gap-2">
+                            <button onclick="editProd('${p.ID_Producto}')" class="text-blue-500 hover:text-blue-700 transition" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="openRestockModal('${p.ID_Producto}')" class="text-accent hover:text-darkaccent transition" title="Abastecer Stock"><i class="fa-solid fa-box-open"></i></button>
+                            <button onclick="deleteProd('${p.ID_Producto}')" class="text-red-500 hover:text-red-700 transition" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+                }
+                
+                tb.insertAdjacentHTML('beforeend', chunkHtml);
+                currentIdx += chunkSize;
+                
+                if (currentIdx < filtered.length) {
+                    setTimeout(renderChunk, 5); // Le da tiempo al navegador a respirar y ocultar el loader
+                }
+            };
+
+            renderChunk();
         }
 
         function renderCompras() {
@@ -2674,47 +2716,70 @@
             }
             c.innerHTML = html;
         }
-const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction = false) => {
-            if(!checkUserActive()) return;
-            
-            if (!isPkg) {
-                const pr = DB.Productos.find(p => p.ID_Producto === id);
-                if (pr) {
-                    const ex = cart.find(x => x.id === id && x.isFraction === isFraction);
-                    const currentQty = ex ? ex.cantidad : 0;
-                    const stockNeeded = isFraction ? (1 / (pr.Fraccion_Cant || 1)) : 1;
-                    const currentTotalQtyNeeded = (currentQty + 1) * stockNeeded;
-                    
-                    if (currentTotalQtyNeeded > Number(pr.Existencias)) {
-                        return showToast(`No puede agregarse: "${pr.Nombre}" está agotado o no hay suficientes existencias.`, "error");
+
+        const validateCartStock = (testCart) => {
+            const demands = {};
+            for (const item of testCart) {
+                if (item.isPaquete) {
+                    const p = DB.Paquetes.find(x => x.ID_Paquete === item.id);
+                    if (p) {
+                        let its = []; try { its = JSON.parse(p.Productos_JSON || '[]'); } catch(e){}
+                        its.forEach(sub => {
+                            demands[sub.id] = (demands[sub.id] || 0) + (sub.cantidad * item.cantidad);
+                        });
+                    }
+                } else {
+                    const p = DB.Productos.find(x => x.ID_Producto === item.id);
+                    if (p) {
+                        const deduction = item.isFraction ? (item.cantidad * (1 / (p.Fraccion_Cant || 1))) : item.cantidad;
+                        demands[item.id] = (demands[item.id] || 0) + deduction;
                     }
                 }
             }
             
-            const ex = cart.find(x => x.id === id && x.isFraction === isFraction);
+            for (const id in demands) {
+                const pr = DB.Productos.find(x => x.ID_Producto === id);
+                if (pr) {
+                    if (demands[id] > Number(pr.Existencias)) {
+                        return { valid: false, productName: pr.Nombre, max: Number(pr.Existencias) };
+                    }
+                }
+            }
+            return { valid: true };
+        };
+
+        const addToCart = window.addToCart = (id, isPkg, price, name, cost, isFraction = false) => {
+            if(!checkUserActive()) return;
+            
+            let testCart = JSON.parse(JSON.stringify(cart));
+            const ex = testCart.find(x => x.id === id && x.isFraction === isFraction);
             if(ex) {
                 ex.cantidad++;
             } else {
-                cart.push({ id, isPaquete: isPkg, precio: price, nombre: name, costo: cost, cantidad: 1, isFraction: isFraction });
+                testCart.push({ id, isPaquete: isPkg, precio: price, nombre: name, costo: cost, cantidad: 1, isFraction: isFraction });
             }
+            
+            const val = validateCartStock(testCart);
+            if (!val.valid) {
+                return showToast(`No puede agregarse: "${val.productName}" está agotado o excede existencias. (Máximo: ${Math.floor(val.max)})`, "error");
+            }
+            
+            cart = testCart;
             renderCart();
-        };        const updateCartQty = window.updateCartQty = (idx, val) => {
+        };
+
+        const updateCartQty = window.updateCartQty = (idx, val) => {
             const qty = Number(val);
             if(qty > 0) {
-                const item = cart[idx];
-                if (!item.isPaquete) {
-                    const pr = DB.Productos.find(p => p.ID_Producto === item.id);
-                    if (pr) {
-                        const isFraction = item.isFraction;
-                        const maxQty = isFraction ? Math.floor(Number(pr.Existencias) * Number(pr.Fraccion_Cant || 1)) : Math.floor(Number(pr.Existencias));
-                        if (qty > maxQty) {
-                            cart[idx].cantidad = maxQty; 
-                            renderCart();
-                            return showToast(`No puede exceder las existencias disponibles. (Mximo: ${maxQty})`, "error");
-                        }
-                    }
+                let testCart = JSON.parse(JSON.stringify(cart));
+                testCart[idx].cantidad = qty;
+                
+                const valid = validateCartStock(testCart);
+                if (!valid.valid) {
+                    renderCart();
+                    return showToast(`No puede exceder las existencias disponibles de "${valid.productName}". (Máximo: ${Math.floor(valid.max)})`, "error");
                 }
-                cart[idx].cantidad = qty;
+                cart = testCart;
             } else {
                 cart.splice(idx, 1);
             }
