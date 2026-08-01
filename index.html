@@ -303,7 +303,7 @@
                     <div class="flex gap-4 border-b border-gray-200 mb-6">
                         <button onclick="setInvSub('productos')" class="inv-sub font-bold text-primary border-b-2 border-primary pb-2 px-2">Productos</button>
                         <button onclick="setInvSub('categorias')" class="inv-sub font-bold text-gray-400 pb-2 px-2 hover:text-primary">Categorías</button>
-                        <button onclick="setInvSub('compras')" class="inv-sub font-bold text-gray-400 pb-2 px-2 hover:text-primary hidden">Historial Compras</button>
+                        <button onclick="setInvSub('compras')" class="inv-sub admin-only font-bold text-gray-400 pb-2 px-2 hover:text-primary">Historial Compras</button>
                     </div>
 
                     <!-- Productos -->
@@ -357,7 +357,7 @@
                         <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto h-[600px] overflow-y-auto">
                             <table class="w-full text-left text-sm">
                                 <thead class="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase text-xs sticky top-0 shadow-sm">
-                                    <tr><th class="p-4">Fecha</th><th class="p-4">Compra ID</th><th class="p-4">Producto</th><th class="p-4 text-center">Cantidad</th><th class="p-4">Costo U.</th><th class="p-4">Proveedor/Notas</th><th class="p-4">Usuario</th></tr>
+                                    <tr><th class="p-4">Fecha</th><th class="p-4">Producto</th><th class="p-4">Código</th><th class="p-4 text-center">Cantidad</th><th class="p-4">Costo U.</th><th class="p-4">Costo Total</th><th class="p-4">Proveedor/Notas</th><th class="p-4">Usuario</th></tr>
                                 </thead>
                                 <tbody id="tbl-compras" class="divide-y divide-gray-100"></tbody>
                             </table>
@@ -367,6 +367,46 @@
 
                 <!-- 4. FINANZAS -->
                 <div id="tab-fin" class="tab-content hidden-view animate-fade w-full">
+
+                    <!-- EFECTIVO EN CAJA (VISIBLE SOLO PARA ADMIN) -->
+                    <div id="caja-panel" class="admin-only bg-primary text-white rounded-xl p-5 mb-6 shadow-sm">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                            <div class="shrink-0">
+                                <p class="text-[11px] uppercase tracking-wider text-accent font-bold">Efectivo en caja</p>
+                                <p class="text-4xl font-black mt-1 leading-none" id="caja-saldo">Q 0.00</p>
+                                <p class="text-[11px] text-gray-300 mt-2" id="caja-desde">Sin base configurada</p>
+                            </div>
+
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 flex-1 lg:border-l lg:border-white/10 lg:pl-6">
+                                <div>
+                                    <p class="text-[10px] uppercase text-gray-400 font-bold" id="caja-lbl-ancla">Base inicial</p>
+                                    <p class="text-lg font-bold" id="caja-ancla">Q 0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] uppercase text-gray-400 font-bold">+ Ventas en efectivo</p>
+                                    <p class="text-lg font-bold text-accent" id="caja-ventas">Q 0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] uppercase text-gray-400 font-bold" title="Gastos registrados a mano + compras de inventario">&minus; Gastos y compras</p>
+                                    <p class="text-lg font-bold text-red-400" id="caja-gastos">Q 0.00</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] uppercase text-gray-400 font-bold">Ganancia bruta</p>
+                                    <p class="text-lg font-bold text-green-400" id="caja-ganancia">Q 0.00</p>
+                                </div>
+                            </div>
+
+                            <div class="flex lg:flex-col gap-2 shrink-0">
+                                <button onclick="openCajaBase()" class="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded text-xs font-bold transition flex items-center justify-center gap-2"><i class="fa-solid fa-sliders"></i> Ajustar base</button>
+                                <button onclick="openCierreCaja()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1.5 rounded text-xs font-bold transition flex items-center justify-center gap-2"><i class="fa-solid fa-cash-register"></i> Cierre de caja</button>
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-4 pt-3 border-t border-white/10" id="caja-nota">
+                            Suma las ventas cobradas en efectivo (las anuladas no cuentan, y tarjeta o transferencia van al banco).
+                            Resta los gastos: tanto los que se registran con el bot&oacute;n <b>Registrar</b> como el dinero que sale al <b>abastecer stock</b> en Inventario.
+                        </p>
+                    </div>
+
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div class="flex flex-wrap items-center gap-3">
                             <div class="flex flex-col gap-1">
@@ -441,9 +481,11 @@
                                     <tr>
                                         <th class="p-3">ID / Fecha</th>
                                         <th class="p-3">Mes/Año</th>
+                                        <th class="p-3 text-right">Esperado</th>
                                         <th class="p-3 text-right">Efectivo Físico</th>
-                                        <th class="p-3 text-right">Base / Sencillo</th>
-                                        <th class="p-3 text-right">A Depositar</th>
+                                        <th class="p-3 text-right">Diferencia</th>
+                                        <th class="p-3 text-right">Entregado</th>
+                                        <th class="p-3 text-right">Queda en Caja</th>
                                         <th class="p-3">Observaciones</th>
                                     </tr>
                                 </thead>
@@ -729,11 +771,11 @@
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Alerta Mínima</label>
                         <input type="number" id="prd-alerta" class="input-base" value="5" required>
-                    
+                    </div>
                     <div class="col-span-2">
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Fecha de Caducidad (Opcional)</label>
                         <input type="date" id="prd-caducidad" class="input-base">
-                    </div></div>
+                    </div>
                 </div>
                 
                 <!-- Fraccionamiento -->
@@ -998,19 +1040,39 @@
                 <h3 class="font-bold text-primary text-lg flex items-center gap-2"><i class="fa-solid fa-cash-register"></i> Cierre de Caja</h3>
                 <button onclick="closeModal('modal-caja')" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button>
             </div>
-            <form id="form-caja" onsubmit="event.preventDefault(); saveCierreCaja();" class="p-6 flex flex-col gap-4">
-                <div class="grid grid-cols-1 gap-4 mt-2">
+            <form id="form-caja" onsubmit="event.preventDefault(); saveCierreCaja();" class="p-6 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 flex justify-between items-center">
+                    <div>
+                        <p class="text-[11px] font-bold text-gray-500 uppercase">Efectivo que debería haber</p>
+                        <p class="text-[10px] text-gray-400" id="caja-esperado-detalle">&ndash;</p>
+                    </div>
+                    <p class="text-2xl font-black text-primary" id="caja-esperado" data-value="0">Q 0.00</p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-xs font-bold text-gray-500">EFECTIVO FÍSICO EN CAJA (CONTADO MANUALMENTE)</label>
-                        <input type="number" step="0.01" id="caja-fisico" class="input-base text-lg font-bold" placeholder="0.00" required>
+                        <input type="number" step="0.01" id="caja-fisico" class="input-base text-lg font-bold" placeholder="0.00" oninput="recalcCierre()" required>
                     </div>
+
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-500 uppercase">Diferencia (físico &minus; esperado)</span>
+                        <span class="text-lg font-black text-gray-500" id="caja-diferencia" data-value="0">Q 0.00</span>
+                    </div>
+
                     <div class="flex flex-col gap-1">
                         <label class="text-xs font-bold text-gray-500">BASE O SENCILLO (LO QUE SE QUEDARÁ EN CAJA)</label>
-                        <input type="number" step="0.01" id="caja-sencillo" class="input-base text-lg font-bold text-gray-600" value="0" required>
+                        <input type="number" step="0.01" id="caja-sencillo" class="input-base text-lg font-bold text-gray-600" value="0" oninput="recalcCierre()" required>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-xs font-bold text-green-600">EFECTIVO A DEPOSITAR / ENTREGAR</label>
-                        <input type="number" step="0.01" id="caja-entregar" class="input-base text-lg font-black text-green-700 bg-green-50" placeholder="0.00" required>
+                        <input type="number" step="0.01" id="caja-entregar" class="input-base text-lg font-black text-green-700 bg-green-50" placeholder="0.00" oninput="this.dataset.touched='1'; recalcCierre();" required>
+                        <span class="text-[10px] text-gray-400">Se sugiere automáticamente: físico &minus; sencillo. Podés cambiarlo.</span>
+                    </div>
+
+                    <div class="bg-primary text-white rounded-lg p-3 flex justify-between items-center">
+                        <span class="text-xs font-bold uppercase text-accent">Queda en caja después del cierre</span>
+                        <span class="text-xl font-black" id="caja-saldo-final" data-value="0">Q 0.00</span>
                     </div>
                 </div>
 
@@ -1019,11 +1081,44 @@
                     <textarea id="caja-obs" class="input-base h-20 text-sm" placeholder="Opcional si el cuadro es exacto. Obligatorio si hay diferencia."></textarea>
                 </div>
 
-                <div class="flex justify-end gap-3 mt-4">
+                <div class="flex justify-end gap-3 mt-2">
                     <button type="button" onclick="closeModal('modal-caja')" class="px-4 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded">Cancelar</button>
-                    <button type="submit" id="btn-save-caja" class="btn-primary py-2 px-6"><i class="fa-solid fa-lock mr-2"></i> Procesar Cierre</button>
+                    <button type="submit" id="btn-save-caja" class="bg-primary text-white font-bold rounded-lg py-2 px-6 hover:bg-gray-800 transition"><i class="fa-solid fa-lock mr-2"></i> Procesar Cierre</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL BASE DE CAJA -->
+    <div id="mod-caja-base" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden-view">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fade">
+            <div class="bg-gray-50 border-b p-4 flex justify-between items-center">
+                <h3 class="font-bold text-primary text-lg flex items-center gap-2"><i class="fa-solid fa-sliders"></i> Base de caja</h3>
+                <button onclick="closeModal('mod-caja-base')" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <p class="text-xs text-gray-500 leading-relaxed">
+                    Este es el punto de partida del conteo. A partir de la fecha que elijas, el sistema suma las ventas en efectivo y resta los gastos.
+                    Cuando hagas un cierre de caja, el conteo vuelve a arrancar desde el saldo que quede ese día.
+                </p>
+                <p class="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3 leading-relaxed">
+                    <i class="fa-solid fa-circle-info mr-1 text-primary"></i>
+                    Si ponés una fecha <b>posterior</b> al último cierre, esta base manda y todo lo anterior
+                    deja de contar. Sirve para volver a arrancar limpio después de cargar inventario.
+                </p>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Efectivo con el que arranca la caja</label>
+                    <input type="number" step="0.01" id="caja-base-monto" class="input-base text-lg font-bold" placeholder="0.00">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Desde qué fecha cuenta</label>
+                    <input type="date" id="caja-base-fecha" class="input-base">
+                </div>
+                <div class="flex justify-end gap-3 mt-2">
+                    <button type="button" onclick="closeModal('mod-caja-base')" class="px-4 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded">Cancelar</button>
+                    <button type="button" onclick="saveCajaBase()" class="btn-accent py-2 px-6">Guardar base</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1130,7 +1225,7 @@
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBNyZFSkb-MytO4CDcVWTPTxarfpQCj5RazzEJqhotIE-uFUOaJ6j-SujjXW6A7fMr/exec"; 
 
         // ESTADO GLOBAL
-        let DB = { Productos:[], Categorias:[], Paquetes:[], Ventas_Facturas:[], Gastos:[], Tickets_Tareas:[], Configuracion:[], Marketing_Templates:[], Auditoria_Logs:[], Usuarios:[], Asistencia_Usuarios:[] };
+        let DB = { Productos:[], Categorias:[], Paquetes:[], Ventas_Facturas:[], Gastos:[], Tickets_Tareas:[], Configuracion:[], Auditoria_Logs:[], Usuarios:[], Asistencia_Usuarios:[], Inventario_Compras:[], Caja_Mensual:[] };
         let currentUser = null; // Email Firebase
         let activeAppUser = null; // Usuario seleccionado (PIN)
         let cart = [];
@@ -1252,10 +1347,18 @@
             return s;
         };
 
-        const parseDateToInt = window.parseDateToInt = (dateStr) => {
+        // ==========================================================
+        // === CAJA_CORE_START ===
+        // Logica pura (sin DOM) compartida por el panel de efectivo, el
+        // dashboard, la grafica y las pruebas de tests/caja.test.js.
+        // No uses document ni window dentro de este bloque.
+        // ==========================================================
+        const toNum = (v) => { const n = Number(v); return isNaN(n) ? 0 : n; };
+
+        const parseDateToInt = (dateStr) => {
             if (!dateStr) return 0;
             let s = String(dateStr).trim();
-            
+
             // Extract Time
             let timeStr = '000000';
             if (s.includes(' ')) {
@@ -1271,8 +1374,8 @@
             }
 
             if (s.match(/^\d{4}-\d{2}-\d{2}$/)) return parseInt(s.replace(/-/g, '') + timeStr);
-            if (s.includes('T')) s = s.split('T')[0]; 
-            
+            if (s.includes('T')) s = s.split('T')[0];
+
             const parts = s.split(' ')[0].split(/[\/-]/);
             if (parts.length === 3) {
                 let y = parts[2], m = parts[1], d = parts[0];
@@ -1281,6 +1384,174 @@
                 return parseInt(`${y}${m.padStart(2,'0')}${d.padStart(2,'0')}${timeStr}`);
             }
             return 0;
+        };
+
+        // Un recibo anulado no es venta: no suma a caja, ni a ventas, ni a ganancia.
+        const ventaEsAnulada = (f) => String((f && f.Estatus) || '').trim().toLowerCase() === 'cancelado';
+
+        // Solo el efectivo entra al cajon. Tarjeta y transferencia van al banco.
+        const ventaEsEfectivo = (f) => {
+            const m = String((f && f.Metodo_Pago) || 'Efectivo').trim().toLowerCase();
+            return m === '' || m === 'efectivo';
+        };
+
+        // Costo de mercancia de una factura (expande paquetes y fracciones)
+        const costoDeVenta = (db, factura) => {
+            let costo = 0;
+            let items = [];
+            try { items = JSON.parse(factura.Items_JSON || '[]'); } catch(e) { return 0; }
+
+            items.forEach(i => {
+                let costoUnitario = 0;
+                if (i.isPaquete || i.isCombo) {
+                    const pk = (db.Paquetes || []).find(p => p.ID_Paquete === i.id);
+                    if (pk) {
+                        let sub = [];
+                        try { sub = JSON.parse(pk.Productos_JSON || '[]'); } catch(e) {}
+                        sub.forEach(si => {
+                            const rp = (db.Productos || []).find(p => p.ID_Producto === si.id);
+                            if (rp) costoUnitario += toNum(rp.Costo_Compra) * toNum(si.cantidad);
+                        });
+                    }
+                } else {
+                    const pr = (db.Productos || []).find(p => p.ID_Producto === i.id);
+                    if (pr) costoUnitario = toNum(pr.Costo_Compra);
+                }
+
+                let cant = toNum(i.cantidad);
+                if (i.isFraction || i.isFraccion) {
+                    const pr = (db.Productos || []).find(p => p.ID_Producto === i.id);
+                    if (pr && toNum(pr.Fraccion_Cant) > 0) cant = cant / toNum(pr.Fraccion_Cant);
+                }
+                costo += costoUnitario * cant;
+            });
+            return costo;
+        };
+
+        // Unidades de un producto que YA quedaron registradas como Gasto de mercancia.
+        // Se busca por el codigo [ID: XXX] porque el nombre puede cambiar.
+        const unidadesYaRegistradas = (db, prod) => {
+            const tag = '[ID: ' + prod.ID_Producto + ']';
+            let qty = 0;
+            (db.Gastos || []).forEach(g => {
+                if (String(g.Tipo || '') !== 'Mercanc\u00eda') return;
+                const c = String(g.Concepto || '');
+                if (c.indexOf(tag) === -1) return;
+                const m = c.match(/\((\d+(?:\.\d+)?)\s*unds\)/);
+                if (m) qty += toNum(m[1]);
+            });
+            return qty;
+        };
+
+        // Costo del inventario que entro sin dejar un Gasto (productos historicos).
+        // Evita contar dos veces la mercancia que si tiene su Gasto registrado.
+        const costoMercanciaSinRegistrar = (db, prod) => {
+            let vendidas = 0;
+            (db.Ventas_Facturas || []).forEach(f => {
+                if (ventaEsAnulada(f)) return;
+                try {
+                    JSON.parse(f.Items_JSON || '[]').forEach(i => {
+                        if (i.id === prod.ID_Producto) vendidas += toNum(i.cantidad);
+                    });
+                } catch(e) {}
+            });
+            const compradas = toNum(prod.Existencias) + vendidas;
+            const faltantes = compradas - unidadesYaRegistradas(db, prod);
+            return faltantes > 0 ? faltantes * toNum(prod.Costo_Compra) : 0;
+        };
+
+        // ---- EFECTIVO EN CAJA ----------------------------------------------
+        // Punto de partida = ultimo cierre de caja. Si nunca se ha hecho uno,
+        // se usa la base inicial que configura el dueno en Finanzas.
+        // Saldo = punto de partida + ventas en efectivo - gastos.
+        const calcularEstadoCaja = (db, opts) => {
+            opts = opts || {};
+            const cierres = (db.Caja_Mensual || []).slice()
+                .sort((a, b) => parseDateToInt(a.fecha_registro) - parseDateToInt(b.fecha_registro));
+            const ultimo = cierres.length ? cierres[cierres.length - 1] : null;
+
+            // Manda el punto de partida MAS RECIENTE. Normalmente es el ultimo cierre,
+            // pero si el dueno ajusta la base con una fecha posterior, esa base gana:
+            // asi puede volver a arrancar el conteo despues de cargar el inventario
+            // sin tener que inventar un cierre falso.
+            const fechaCierre = ultimo ? parseDateToInt(ultimo.fecha_registro) : 0;
+            const fechaBase = parseDateToInt(opts.fechaBase || '');
+            const mandaElCierre = !!ultimo && fechaCierre >= fechaBase;
+
+            let ancla, anclaFecha, anclaEtiqueta;
+            if (mandaElCierre) {
+                const sf = ultimo.saldo_final;
+                ancla = (sf === undefined || sf === null || sf === '')
+                    ? toNum(ultimo.total_recaudado) - toNum(ultimo.efectivo_entregado)
+                    : toNum(sf);
+                anclaFecha = ultimo.fecha_registro || '';
+                anclaEtiqueta = 'Qued\u00f3 del \u00faltimo cierre';
+            } else {
+                ancla = toNum(opts.baseInicial);
+                anclaFecha = opts.fechaBase || '';
+                anclaEtiqueta = 'Base inicial';
+            }
+
+            const desdeN = parseDateToInt(anclaFecha);
+            let ventasEfectivo = 0, ventasOtros = 0, gastos = 0, gananciaBruta = 0;
+
+            (db.Ventas_Facturas || []).forEach(f => {
+                if (ventaEsAnulada(f)) return;
+                if (desdeN && parseDateToInt(f.Fecha) <= desdeN) return;
+                const total = toNum(f.Total_Pagar);
+                if (ventaEsEfectivo(f)) ventasEfectivo += total; else ventasOtros += total;
+                gananciaBruta += total - costoDeVenta(db, f);
+            });
+
+            (db.Gastos || []).forEach(g => {
+                if (desdeN && parseDateToInt(g.Fecha) <= desdeN) return;
+                gastos += toNum(g.Monto);
+            });
+
+            return {
+                ancla: ancla,
+                anclaFecha: anclaFecha,
+                anclaEtiqueta: anclaEtiqueta,
+                ventasEfectivo: ventasEfectivo,
+                ventasOtros: ventasOtros,
+                gastos: gastos,
+                gananciaBruta: gananciaBruta,
+                saldo: ancla + ventasEfectivo - gastos,
+                hayBase: !!ultimo || toNum(opts.baseInicial) !== 0 || !!opts.fechaBase,
+                mandaElCierre: mandaElCierre,
+                cierres: cierres.length
+            };
+        };
+        // === CAJA_CORE_END ===
+
+        window.parseDateToInt = parseDateToInt;
+        window.calcularEstadoCaja = calcularEstadoCaja;
+
+        // Filtro de rango de fechas reutilizable (Finanzas y exportaciones CSV)
+        const makeDateFilter = (desde, hasta) => {
+            const soloDia = (v) => { let n = parseDateToInt(v); return n > 99999999 ? Math.floor(n / 1000000) : n; };
+            const dsN = soloDia(desde), deN = soloDia(hasta);
+            return (dStr) => {
+                if (!dsN && !deN) return true;
+                const dN = soloDia(dStr);
+                if (!dN) return false;
+                if (dsN && deN) return dN >= dsN && dN <= deN;
+                if (dsN) return dN >= dsN;
+                return dN <= deN;
+            };
+        };
+
+        // Descarga de CSV (una sola implementacion para todos los reportes)
+        const downloadCSV = (nombreArchivo, contenido) => {
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), contenido], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `${nombreArchivo}_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         };
         
         async function apiCall(action, payload = {}, forceRefresh = false) {
@@ -1448,9 +1719,6 @@
                 const pkgSel = document.getElementById('pkg-sel-prod');
                 pkgSel.innerHTML = (DB.Productos || []).map(p => `<option value="${p.ID_Producto}">${p.Nombre} - Stock: ${p.Existencias}</option>`).join('');
                 
-                const mktSel = document.getElementById('mkt-sel-tpl');
-                mktSel.innerHTML = '<option value="">Seleccione una plantilla...</option>' + (DB.Marketing_Templates || []).map(t => `<option value="${t.Template_ID}">${t.Nombre}</option>`).join('');
-                
                 const asigSel = document.getElementById('tk-asig');
                 asigSel.innerHTML = '<option value="">Seleccione a quién asignar...</option>' + (DB.Usuarios || []).map(u => `<option value="${u.Nombre}">${u.Nombre}</option>`).join('');
             } catch(e) { console.error('Selects Error', e); }
@@ -1458,7 +1726,7 @@
 
         function renderAll() {
             try { renderDashboard(); } catch(e) { console.error('Dashboard Error', e); }
-            try { renderPosCategories(); renderPosCatalog(); } catch(e) { console.error('POS Error', e); }
+            try { renderPosCategories(); renderPosCatalog(); checkLowStockCaja(); } catch(e) { console.error('POS Error', e); }
             try { renderProductos(); } catch(e) { console.error('Productos Error', e); }
             try { renderPaquetes(); } catch(e) { console.error('Paquetes Error', e); }
             try { renderCategorias(); } catch(e) { console.error('Categorias Error', e); }
@@ -1667,7 +1935,7 @@
 
         window.renderDashboard = function renderDashboard() {
             let vTotal = 0, gTotal = 0;
-            const factFiltradas = DB.Ventas_Facturas.filter(f => isDateInPeriod(f.Fecha, dashFilter));
+            const factFiltradas = DB.Ventas_Facturas.filter(f => !ventaEsAnulada(f) && isDateInPeriod(f.Fecha, dashFilter));
             
             let grouping = 'day';
             if (dashFilter === 'custom') {
@@ -1689,36 +1957,7 @@
                 const tot = Number(f.Total_Pagar||0);
                 vTotal += tot;
                 
-                let costoVenta = 0;
-                try {
-                    const items = JSON.parse(f.Items_JSON || '[]');
-                    items.forEach(i => {
-                        let costU = 0;
-                        if (i.isPaquete || i.isCombo) {
-                            const pk = (DB.Paquetes||[]).find(p => p.ID_Paquete === i.id);
-                            if (pk) {
-                                try {
-                                    const pItems = JSON.parse(pk.Productos_JSON || '[]');
-                                    pItems.forEach(pi => {
-                                        const rProd = (DB.Productos||[]).find(rp => rp.ID_Producto === pi.id);
-                                        if (rProd) costU += Number(rProd.Costo_Compra || 0) * Number(pi.cantidad || 0);
-                                    });
-                                } catch(e){}
-                            }
-                        } else {
-                            const pr = (DB.Productos||[]).find(p => p.ID_Producto === i.id);
-                            if (pr) costU = Number(pr.Costo_Compra || 0);
-                        }
-                        
-                        let qty = Number(i.cantidad||0);
-                        if (i.isFraction) {
-                            const pr = (DB.Productos||[]).find(p => p.ID_Producto === i.id);
-                            if (pr && pr.Fraccion_Cant) qty = qty / Number(pr.Fraccion_Cant);
-                        }
-                        costoVenta += (costU * qty);
-                    });
-                } catch(e) {}
-                
+                const costoVenta = costoDeVenta(DB, f);
                 rentCosto += costoVenta;
                 
                 const k = getGroupKey(f.Fecha, grouping);
@@ -1730,28 +1969,11 @@
 
             DB.Gastos.filter(g => isDateInPeriod(g.Fecha, dashFilter)).forEach(g => gTotal += Number(g.Monto||0));
             
+            // Mercancia historica que nunca dejo un Gasto registrado.
+            // costoMercanciaSinRegistrar descuenta lo que ya esta en Gastos, para no contarlo dos veces.
             let legacyCost = 0;
             (DB.Productos || []).forEach(p => {
-                if (isDateInPeriod(p.Creado_En, dashFilter)) {
-                    let soldQty = 0;
-                    (DB.Ventas_Facturas || []).forEach(fac => {
-                        try {
-                            const items = JSON.parse(fac.Items_JSON || '[]');
-                            items.forEach(i => { if (i.id === p.ID_Producto) soldQty += Number(i.cantidad || 0); });
-                        } catch(e) {}
-                    });
-                    const totalPurchased = Number(p.Existencias || 0) + soldQty;
-                    let loggedQty = 0;
-                    const prefix = `Ingreso de inventario: ${p.Nombre} (`;
-                    (DB.Gastos || []).forEach(g => {
-                        if (g.Tipo === 'Mercancía' && g.Concepto.startsWith(prefix)) {
-                            const match = g.Concepto.match(/\((\d+)\s*unds\)/);
-                            if (match) loggedQty += Number(match[1]);
-                        }
-                    });
-                    const missingQty = totalPurchased - loggedQty;
-                    if (missingQty > 0) legacyCost += (missingQty * Number(p.Costo_Compra || 0));
-                }
+                if (isDateInPeriod(p.Creado_En, dashFilter)) legacyCost += costoMercanciaSinRegistrar(DB, p);
             });
             gTotal += legacyCost;
 
@@ -1769,9 +1991,10 @@
                 document.getElementById('kpi-rent-costo').innerText = fMoney(rentCosto); document.getElementById('kpi-rent-costo').title = fMoney(rentCosto);
                 document.getElementById('kpi-rent-ganancia').innerText = fMoney(rentGanancia); document.getElementById('kpi-rent-ganancia').title = fMoney(rentGanancia);
                 
-                document.getElementById('cnt-ventas-hoy').innerText = DB.Ventas_Facturas.filter(f => isDateInPeriod(f.Fecha, 'hoy')).length;
-                document.getElementById('cnt-ventas-semana').innerText = DB.Ventas_Facturas.filter(f => isDateInPeriod(f.Fecha, 'semana')).length;
-                document.getElementById('cnt-ventas-mes').innerText = DB.Ventas_Facturas.filter(f => isDateInPeriod(f.Fecha, 'mes')).length;
+                const noAnuladas = DB.Ventas_Facturas.filter(f => !ventaEsAnulada(f));
+                document.getElementById('cnt-ventas-hoy').innerText = noAnuladas.filter(f => isDateInPeriod(f.Fecha, 'hoy')).length;
+                document.getElementById('cnt-ventas-semana').innerText = noAnuladas.filter(f => isDateInPeriod(f.Fecha, 'semana')).length;
+                document.getElementById('cnt-ventas-mes').innerText = noAnuladas.filter(f => isDateInPeriod(f.Fecha, 'mes')).length;
             }
             
             // Fill Detailed Report Table
@@ -1914,6 +2137,7 @@
 
             if (chartIncludeIngresos) {
                 (DB.Ventas_Facturas || []).forEach(f => {
+                    if (ventaEsAnulada(f)) return;
                     addFinancialData(f.Fecha, 'ingreso', Number(f.Total_Pagar||0));
                 });
             }
@@ -1925,26 +2149,8 @@
 
                 (DB.Productos || []).forEach(p => {
                     if(!p.Creado_En) return;
-                    let soldQty = 0;
-                    (DB.Ventas_Facturas || []).forEach(fac => {
-                        try {
-                            const items = JSON.parse(fac.Items_JSON || '[]');
-                            items.forEach(i => { if (i.id === p.ID_Producto) soldQty += Number(i.cantidad || 0); });
-                        } catch(e) {}
-                    });
-                    const totalPurchased = Number(p.Existencias || 0) + soldQty;
-                    let loggedQty = 0;
-                    const prefix = `Ingreso de inventario: ${p.Nombre} (`;
-                    (DB.Gastos || []).forEach(g => {
-                        if (g.Tipo === 'Mercancía' && g.Concepto.startsWith(prefix)) {
-                            const match = g.Concepto.match(/\((\d+)\s*unds\)/);
-                            if (match) loggedQty += Number(match[1]);
-                        }
-                    });
-                    const missingQty = totalPurchased - loggedQty;
-                    if (missingQty > 0) {
-                        addFinancialData(p.Creado_En, 'gasto', (missingQty * Number(p.Costo_Compra || 0)));
-                    }
+                    const pendiente = costoMercanciaSinRegistrar(DB, p);
+                    if (pendiente > 0) addFinancialData(p.Creado_En, 'gasto', pendiente);
                 });
             }
 
@@ -2007,6 +2213,7 @@
             if(!checkUserActive()) return;
             document.getElementById('prd-id').value = '';
             document.getElementById('prd-nombre').value = '';
+            document.getElementById('prd-marca').value = '';
             document.getElementById('prd-cat').value = '';
             document.getElementById('prd-desc').value = '';
             document.getElementById('prd-costo').value = '';
@@ -2015,6 +2222,14 @@
             document.getElementById('prd-alerta').value = '5';
             document.getElementById('prd-caducidad').value = '';
             document.getElementById('prd-precio').value = '';
+
+            // Fraccionamiento: siempre arranca apagado en un producto nuevo
+            document.getElementById('prd-frac-chk').checked = false;
+            document.getElementById('frac-fields').classList.add('hidden');
+            document.getElementById('prd-frac-tipo').value = 'Blíster';
+            document.getElementById('prd-frac-cant').value = '';
+            document.getElementById('prd-frac-precio').value = '';
+
             document.getElementById('mod-prod-title').innerText = "Nuevo Producto";
             calcMargen();
             openModal('mod-producto');
@@ -2082,17 +2297,34 @@
             if(!DB.Inventario_Compras) DB.Inventario_Compras = [];
             DB.Inventario_Compras.push(rstData);
 
+            // El reabastecimiento es dinero que sale: queda como Gasto de mercancia.
+            // El formato "[ID: xxx] (N unds)" es el que lee costoMercanciaSinRegistrar
+            // para no contar dos veces el mismo inventario.
+            const gastoCompra = {
+                ID_Gasto: 'GST-' + Date.now(),
+                Fecha: sysTime(),
+                Tipo: 'Mercancía',
+                Concepto: `Ingreso de inventario: ${p.Nombre} [ID: ${p.ID_Producto}] (${cant} unds)`,
+                Monto: Number((cant * costo).toFixed(2)),
+                Usuario: getActiveUserName()
+            };
+            if (!DB.Gastos) DB.Gastos = [];
+            DB.Gastos.push(gastoCompra);
+
             await apiCall('crud', { sheetName: 'Inventario_Compras', operation: 'create', rowData: rstData, idField: 'ID_Compra', idValue: rstData.ID_Compra });
-            logAudit('Inventario', 'Reabastecer', `Compra: ${rstData.Producto_Nombre} (+${rstData.Cantidad})`);
+            apiCall('crud', { sheetName: 'Gastos', operation: 'create', rowData: gastoCompra, idField: 'ID_Gasto', idValue: gastoCompra.ID_Gasto });
+            logAudit('Inventario', 'Reabastecer', `Compra: ${rstData.Producto_Nombre} (+${rstData.Cantidad}) por ${fMoney(gastoCompra.Monto)}`);
             await apiCall('crud', { sheetName: 'Productos', operation: 'update', rowData: p, idField: 'ID_Producto', idValue: p.ID_Producto });
 
             setLoading(false);
-            
-            renderProductos(); 
+
+            renderProductos();
             renderCompras();
             renderPosCatalog();
+            renderFinanzas();
+            renderDashboard();
             closeModal('mod-abastecer');
-            showToast("Stock Abastecido Exitosamente");
+            showToast("Stock abastecido y gasto registrado");
         };
 
         const saveProducto = window.saveProducto = async () => {
@@ -2364,6 +2596,12 @@
             renderChunk();
         }
 
+        window.renderInventario = function renderInventario() {
+            renderProductos();
+            renderCategorias();
+            renderCompras();
+        };
+
         function renderCompras() {
             const tb = document.getElementById('tbl-compras');
             if(!tb) return;
@@ -2371,7 +2609,7 @@
             const cFiltered = (DB.Inventario_Compras || []).slice().reverse();
             cFiltered.forEach(c => {
                 html += `<tr class="hover:bg-gray-50 border-b border-gray-100">
-                    <td class="p-3 text-xs text-gray-500 font-mono">${String(c.Fecha).replace('T',' ').replace('.000Z','')}</td>
+                    <td class="p-3 text-xs text-gray-500 font-mono">${formatDisplayDate(c.Fecha)}</td>
                     <td class="p-3 text-sm font-bold text-primary">${c.Producto_Nombre}</td>
                     <td class="p-3 text-sm"><span class="bg-gray-100 px-2 py-1 rounded font-mono">${c.ID_Producto}</span></td>
                     <td class="p-3 text-sm font-bold text-accent">+${c.Cantidad}</td>
@@ -2605,7 +2843,80 @@
             cont.innerHTML = html;
         }
 
-                                window.renderPosCatalog = function renderPosCatalog() {
+        // Tarjeta de producto del POS (misma pieza para busqueda y categorias)
+        const posProductoCardHTML = (p) => {
+            const stock = Number(p.Existencias);
+            const esFraccionado = !!(p.Venta_Fraccionada && p.Fraccion_Cant);
+            const rojo = stock < 1 ? 'text-red-500' : 'text-gray-400';
+
+            let stockDisplay = `<span class="text-xs ${rojo} font-bold">Stock: ${stock.toFixed(2).replace(/\.00$/, '')}</span>`;
+            if (esFraccionado) {
+                const cjs = Math.floor(stock);
+                const fC = Number(p.Fraccion_Cant);
+                const fracs = Math.round((stock - cjs) * fC);
+                const totalPieces = Math.round(stock * fC);
+                const typeLabel = p.Fraccion_Tipo ? p.Fraccion_Tipo.toLowerCase() + (p.Fraccion_Tipo.toLowerCase().endsWith('s') ? '' : 's') : 'fracciones';
+                const abiertas = fracs > 0 ? `<span class="text-[10px] text-blue-600">${fracs}/${fC} abiertas</span><br>` : '';
+                stockDisplay = `<span class="text-xs ${rojo} font-bold leading-tight">Stock: ${cjs} cajas<br>${abiertas}<span class="text-[10px] text-gray-500 block mt-0.5">Total: ${totalPieces} ${typeLabel}</span></span>`;
+            }
+
+            const precio = `<span class="font-black text-primary">${fMoney(p.Precio_Venta)}</span>`;
+            let actionHtml = `<div class="mt-3 flex justify-between items-end">${stockDisplay}${precio}</div>`;
+
+            if (esFraccionado) {
+                actionHtml = `<div class="mt-3 flex justify-between items-end mb-2">${stockDisplay}${precio}</div>
+                    <div class="mt-1 flex gap-1">
+                        <button ${stock>=1?`onclick="event.stopPropagation(); addToCart('${p.ID_Producto}', false, ${p.Precio_Venta}, '${p.Nombre}', ${p.Costo_Compra}, false)"`:'disabled'} class="flex-1 bg-gray-100 ${stock>=1?'hover:bg-gray-200 text-primary':'text-gray-400 opacity-50 cursor-not-allowed'} py-1 rounded text-xs font-bold transition border border-gray-300">Caja</button>
+                        <button ${stock>0?`onclick="event.stopPropagation(); addToCart('${p.ID_Producto}', false, ${p.Fraccion_Precio}, '${p.Nombre} (${p.Fraccion_Tipo})', ${p.Costo_Compra / p.Fraccion_Cant}, true)"`:'disabled'} class="flex-1 bg-blue-100 ${stock>0?'hover:bg-blue-200 text-blue-700':'text-gray-400 opacity-50 cursor-not-allowed'} py-1 rounded text-xs font-bold transition border border-blue-200">${p.Fraccion_Tipo}</button>
+                    </div>`;
+            }
+
+            return `<div class="bg-white border border-gray-200 p-3 rounded-xl cursor-pointer transition flex flex-col justify-between ${stock<=0?'opacity-50 cursor-not-allowed':'hover:border-accent hover:shadow-md'}" ${stock>0?`onclick="addToCart('${p.ID_Producto}', false, ${p.Precio_Venta}, '${p.Nombre}', ${p.Costo_Compra})"`:''}>
+                <p class="font-bold text-sm leading-tight text-primary">${p.Nombre}</p>
+                ${p.Marca ? `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold inline-block mt-1 self-start">${p.Marca}</span>` : ''}
+                ${actionHtml}
+            </div>`;
+        };
+
+        // Tarjeta de paquete del POS
+        const posPaqueteCardHTML = (p) => {
+            let its = []; try { its = JSON.parse(p.Productos_JSON||'[]'); } catch(e){}
+            const pkgDesc = its.map(i => `${i.cantidad}x ${i.name || i.nombre}`).join(' | ');
+            return `<div class="bg-primary border border-primary p-3 rounded-xl cursor-pointer hover:ring-2 hover:ring-accent transition flex flex-col justify-between" onclick="addToCart('${p.ID_Paquete}', true, ${p.Precio_Combo}, '${p.Nombre_Paquete}', 0)" title="${pkgDesc}">
+                <p class="font-bold text-sm leading-tight text-accent"><i class="fa-solid fa-gift mr-1"></i> ${p.Nombre_Paquete}</p>
+                <div class="mt-3 text-right"><span class="font-black text-white">${fMoney(p.Precio_Combo)}</span></div>
+            </div>`;
+        };
+
+        // Alertas de stock bajo y vencimiento arriba del punto de venta
+        const checkLowStockCaja = window.checkLowStockCaja = () => {
+            const cont = document.getElementById('caja-alertas-stock');
+            const lista = document.getElementById('caja-alertas-lista');
+            if (!cont || !lista) return;
+
+            const hoy = new Date(sysTime(true) + 'T00:00:00');
+            const limite = new Date(hoy); limite.setDate(limite.getDate() + 30);
+            let items = [];
+
+            (DB.Productos || []).forEach(p => {
+                const stock = toNum(p.Existencias);
+                if (stock <= toNum(p.Alerta_Minimo)) {
+                    items.push(`<span class="bg-white border border-red-200 rounded px-2 py-1 whitespace-nowrap shrink-0"><b>${p.Nombre}</b> · quedan ${stock.toFixed(2).replace(/\.00$/, '')}</span>`);
+                }
+                if (p.Fecha_Caducidad) {
+                    const vence = new Date(String(p.Fecha_Caducidad).split(' ')[0] + 'T00:00:00');
+                    if (!isNaN(vence) && vence <= limite) {
+                        const vencido = vence < hoy;
+                        items.push(`<span class="bg-white border ${vencido ? 'border-red-400 text-red-700' : 'border-yellow-300 text-yellow-800'} rounded px-2 py-1 whitespace-nowrap shrink-0"><b>${p.Nombre}</b> · ${vencido ? 'vencido' : 'vence'} ${String(p.Fecha_Caducidad).split(' ')[0]}</span>`);
+                    }
+                }
+            });
+
+            lista.innerHTML = items.join('');
+            cont.classList.toggle('hidden', items.length === 0);
+        };
+
+        window.renderPosCatalog = function renderPosCatalog() {
             const q = (document.getElementById('pos-search').value || '');
             const c = document.getElementById('pos-catalog');
             let html = '';
@@ -2617,101 +2928,20 @@
                 renderPosCategories();
 
                 applyProductFilter(q).forEach(p => {
-                    const stock = Number(p.Existencias);
-                    let stockDisplay = `<span class="text-xs ${stock<1?'text-red-500':'text-gray-400'} font-bold">Stock: ${stock.toFixed(2).replace(/\.00$/, '')}</span>`;
-                    
-                    if (p.Venta_Fraccionada && p.Fraccion_Cant) {
-                        const cjs = Math.floor(stock);
-                        const fC = Number(p.Fraccion_Cant);
-                        const fracs = Math.round((stock - cjs) * fC);
-                        const totalPieces = Math.round(stock * fC);
-                        const typeLabel = p.Fraccion_Tipo ? p.Fraccion_Tipo.toLowerCase() + (p.Fraccion_Tipo.toLowerCase().endsWith('s') ? '' : 's') : 'fracciones';
-                        
-                        if (fracs > 0) stockDisplay = `<span class="text-xs ${stock<1?'text-red-500':'text-gray-400'} font-bold leading-tight">Stock: ${cjs} cajas<br><span class="text-[10px] text-blue-600">${fracs}/${fC} abiertas</span><br><span class="text-[10px] text-gray-500 block mt-0.5">Total: ${totalPieces} ${typeLabel}</span></span>`;
-                        else stockDisplay = `<span class="text-xs ${stock<1?'text-red-500':'text-gray-400'} font-bold">Stock: ${cjs} cajas<br><span class="text-[10px] text-gray-500 block mt-0.5">Total: ${totalPieces} ${typeLabel}</span></span>`;
-                    }
-                    
-                    let actionHtml = '';
-                    if(p.Venta_Fraccionada && p.Fraccion_Cant) {
-                        actionHtml = `<div class="mt-3 flex justify-between items-end mb-2">
-                            ${stockDisplay}
-                            <span class="font-black text-primary">${fMoney(p.Precio_Venta)}</span>
-                        </div>
-                        <div class="mt-1 flex gap-1">
-                            <button ${stock>=1?`onclick="event.stopPropagation(); addToCart('${p.ID_Producto}', false, ${p.Precio_Venta}, '${p.Nombre}', ${p.Costo_Compra}, false)"`:'disabled'} class="flex-1 bg-gray-100 ${stock>=1?'hover:bg-gray-200 text-primary':'text-gray-400 opacity-50 cursor-not-allowed'} py-1 rounded text-xs font-bold transition border border-gray-300">Caja</button>
-                            <button ${stock>0?`onclick="event.stopPropagation(); addToCart('${p.ID_Producto}', false, ${p.Fraccion_Precio}, '${p.Nombre} (${p.Fraccion_Tipo})', ${p.Costo_Compra / p.Fraccion_Cant}, true)"`:'disabled'} class="flex-1 bg-blue-100 ${stock>0?'hover:bg-blue-200 text-blue-700':'text-gray-400 opacity-50 cursor-not-allowed'} py-1 rounded text-xs font-bold transition border border-blue-200">${p.Fraccion_Tipo}</button>
-                        </div>`;
-                    } else {
-                        actionHtml = `<div class="mt-3 flex justify-between items-end">
-                            ${stockDisplay}
-                            <span class="font-black text-primary">${fMoney(p.Precio_Venta)}</span>
-                        </div>`;
-                    }
-                    html += `<div class="bg-white border border-gray-200 p-3 rounded-xl cursor-pointer transition flex flex-col justify-between ${stock<=0?'opacity-50 cursor-not-allowed':'hover:border-accent hover:shadow-md'}" ${stock>0?`onclick="addToCart('${p.ID_Producto}', false, ${p.Precio_Venta}, '${p.Nombre}', ${p.Costo_Compra})"`:''}>
-                        <p class="font-bold text-sm leading-tight text-primary">${p.Nombre}</p>
-                        ${p.Marca ? `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold inline-block mt-1 self-start">${p.Marca}</span>` : ''}
-                        ${actionHtml}
-                    </div>`;
+                    html += posProductoCardHTML(p);
                 });
 
-                (DB.Paquetes || []).filter(p => (p.Nombre_Paquete || '').toLowerCase().includes(q.toLowerCase()) && p.Estado==='Activo').forEach(p => {
-                    let its = []; try { its = JSON.parse(p.Productos_JSON||'[]'); } catch(e){}
-                    let pkgDesc = its.map(i => `${i.cantidad}x ${i.name || i.nombre}`).join(' | ');
-                    html += `<div class="bg-primary border border-primary p-3 rounded-xl cursor-pointer hover:ring-2 hover:ring-accent transition flex flex-col justify-between" onclick="addToCart('${p.ID_Paquete}', true, ${p.Precio_Combo}, '${p.Nombre_Paquete}', 0)" title="${pkgDesc}">
-                        <p class="font-bold text-sm leading-tight text-accent"><i class="fa-solid fa-gift mr-1"></i> ${p.Nombre_Paquete}</p>
-                        <div class="mt-3 text-right"><span class="font-black text-white">${fMoney(p.Precio_Combo)}</span></div>
-                    </div>`;
-                });
+                (DB.Paquetes || []).filter(p => (p.Nombre_Paquete || '').toLowerCase().includes(q.toLowerCase()) && p.Estado==='Activo')
+                    .forEach(p => { html += posPaqueteCardHTML(p); });
                 c.innerHTML = html;
                 return;
             }
 
             if (activePosCategory === 'PAQUETES') {
-                (DB.Paquetes || []).filter(p => p.Estado==='Activo').forEach(p => {
-                    let its = []; try { its = JSON.parse(p.Productos_JSON||'[]'); } catch(e){}
-                    let pkgDesc = its.map(i => `${i.cantidad}x ${i.name || i.nombre}`).join(' | ');
-                    html += `<div class="bg-primary border border-primary p-3 rounded-xl cursor-pointer hover:shadow-lg hover:scale-[1.02] transition flex flex-col justify-between" onclick="addToCart('${p.ID_Paquete}', true, ${p.Precio_Combo}, '${p.Nombre_Paquete}', 0)" title="${pkgDesc}">
-                        <p class="font-bold text-sm leading-tight text-accent"><i class="fa-solid fa-gift mr-1"></i> ${p.Nombre_Paquete}</p>
-                        <div class="mt-3 text-right"><span class="font-black text-white">${fMoney(p.Precio_Combo)}</span></div>
-                    </div>`;
-                });
+                (DB.Paquetes || []).filter(p => p.Estado==='Activo').forEach(p => { html += posPaqueteCardHTML(p); });
             } else if (activePosCategory) {
                 (DB.Productos || []).filter(p => p.ID_Categoria === activePosCategory).forEach(p => {
-                    const stock = Number(p.Existencias);
-                    let stockDisplay = `<span class="text-xs ${stock<1?'text-red-500':'text-gray-400'} font-bold">Stock: ${stock.toFixed(2).replace(/\.00$/, '')}</span>`;
-                    
-                    if (p.Venta_Fraccionada && p.Fraccion_Cant) {
-                        const cjs = Math.floor(stock);
-                        const fC = Number(p.Fraccion_Cant);
-                        const fracs = Math.round((stock - cjs) * fC);
-                        const totalPieces = Math.round(stock * fC);
-                        const typeLabel = p.Fraccion_Tipo ? p.Fraccion_Tipo.toLowerCase() + (p.Fraccion_Tipo.toLowerCase().endsWith('s') ? '' : 's') : 'fracciones';
-                        
-                        if (fracs > 0) stockDisplay = `<span class="text-xs ${stock<1?'text-red-500':'text-gray-400'} font-bold leading-tight">Stock: ${cjs} cajas<br><span class="text-[10px] text-blue-600">${fracs}/${fC} abiertas</span><br><span class="text-[10px] text-gray-500 block mt-0.5">Total: ${totalPieces} ${typeLabel}</span></span>`;
-                        else stockDisplay = `<span class="text-xs ${stock<1?'text-red-500':'text-gray-400'} font-bold">Stock: ${cjs} cajas<br><span class="text-[10px] text-gray-500 block mt-0.5">Total: ${totalPieces} ${typeLabel}</span></span>`;
-                    }
-                    
-                    let actionHtml = '';
-                    if(p.Venta_Fraccionada && p.Fraccion_Cant) {
-                        actionHtml = `<div class="mt-3 flex justify-between items-end mb-2">
-                            ${stockDisplay}
-                            <span class="font-black text-primary">${fMoney(p.Precio_Venta)}</span>
-                        </div>
-                        <div class="mt-1 flex gap-1">
-                            <button ${stock>=1?`onclick="event.stopPropagation(); addToCart('${p.ID_Producto}', false, ${p.Precio_Venta}, '${p.Nombre}', ${p.Costo_Compra}, false)"`:'disabled'} class="flex-1 bg-gray-100 ${stock>=1?'hover:bg-gray-200 text-primary':'text-gray-400 opacity-50 cursor-not-allowed'} py-1 rounded text-xs font-bold transition border border-gray-300">Caja</button>
-                            <button ${stock>0?`onclick="event.stopPropagation(); addToCart('${p.ID_Producto}', false, ${p.Fraccion_Precio}, '${p.Nombre} (${p.Fraccion_Tipo})', ${p.Costo_Compra / p.Fraccion_Cant}, true)"`:'disabled'} class="flex-1 bg-blue-100 ${stock>0?'hover:bg-blue-200 text-blue-700':'text-gray-400 opacity-50 cursor-not-allowed'} py-1 rounded text-xs font-bold transition border border-blue-200">${p.Fraccion_Tipo}</button>
-                        </div>`;
-                    } else {
-                        actionHtml = `<div class="mt-3 flex justify-between items-end">
-                            ${stockDisplay}
-                            <span class="font-black text-primary">${fMoney(p.Precio_Venta)}</span>
-                        </div>`;
-                    }
-                    html += `<div class="bg-white border border-gray-200 p-3 rounded-xl cursor-pointer transition flex flex-col justify-between ${stock<=0?'opacity-50 cursor-not-allowed':'hover:border-accent hover:shadow-md'}" ${stock>0?`onclick="addToCart('${p.ID_Producto}', false, ${p.Precio_Venta}, '${p.Nombre}', ${p.Costo_Compra})"`:''}>
-                        <p class="font-bold text-sm leading-tight text-primary">${p.Nombre}</p>
-                        ${p.Marca ? `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-bold inline-block mt-1 self-start">${p.Marca}</span>` : ''}
-                        ${actionHtml}
-                    </div>`;
+                    html += posProductoCardHTML(p);
                 });
             }
             c.innerHTML = html;
@@ -2922,6 +3152,9 @@
             };
 
             // Local Update (Deduct Stock & save Fac)
+            // Solo se ajusta la copia local para que la pantalla responda al instante.
+            // El descuento real en la hoja lo hace checkoutSession en el backend:
+            // si tambien lo mandaramos por 'crud' el stock se restaria dos veces.
             cart.forEach(item => {
                 if(item.isPaquete) {
                     const p = DB.Paquetes.find(x=>x.ID_Paquete===item.id);
@@ -2930,10 +3163,7 @@
                         try { its = JSON.parse(p.Productos_JSON||'[]'); } catch(e){}
                         its.forEach(c => {
                             const subP = DB.Productos.find(x=>x.ID_Producto===c.id);
-                            if(subP) {
-                                subP.Existencias = Number(subP.Existencias) - (c.cantidad * item.cantidad);
-                                apiCall('crud', { sheetName: 'Productos', operation: 'update', rowData: subP, idField: 'ID_Producto', idValue: subP.ID_Producto });
-                            }
+                            if(subP) subP.Existencias = Number(subP.Existencias) - (c.cantidad * item.cantidad);
                         });
                     }
                 } else {
@@ -2941,7 +3171,6 @@
                     if(p){
                         const deduction = item.isFraction ? (item.cantidad * (1 / (p.Fraccion_Cant || 1))) : item.cantidad;
                         p.Existencias = Number(p.Existencias) - deduction;
-                        apiCall('crud', { sheetName: 'Productos', operation: 'update', rowData: p, idField: 'ID_Producto', idValue: p.ID_Producto });
                     }
                 }
             });
@@ -2958,7 +3187,7 @@
             renderPosCategories();
             renderPosCatalog(); 
             renderProductos();
-            if(typeof checkLowStockCaja === "function") checkLowStockCaja(); 
+            checkLowStockCaja();
             renderPaquetes();
             renderFinanzas(); 
             renderDashboard();
@@ -3085,24 +3314,9 @@
         window.renderFinanzas = function renderFinanzas() {
             const ds = document.getElementById('fin-date-start')?.value;
             const de = document.getElementById('fin-date-end')?.value;
-            
-            const checkDate = (dStr) => {
-                if(!ds && !de) return true;
-                if(!dStr) return false;
-                let dsN = parseDateToInt(ds);
-                let deN = parseDateToInt(de);
-                let dN = parseDateToInt(dStr);
-                if (dsN > 99999999) dsN = Math.floor(dsN / 1000000);
-                if (deN > 99999999) deN = Math.floor(deN / 1000000);
-                if (dN > 99999999) dN = Math.floor(dN / 1000000);
-                
-                if(!dsN && !deN) return true;
-                if(!dN) return false;
-                if(dsN && deN) return dN >= dsN && dN <= deN;
-                if(dsN) return dN >= dsN;
-                if(deN) return dN <= deN;
-                return true;
-            };
+            const checkDate = makeDateFilter(ds, de);
+
+            renderCajaPanel();
 
             const ft = document.getElementById('tbl-facturas'); ft.innerHTML = '';
             const fFiltered = (DB.Ventas_Facturas || []).filter(x => checkDate(x.Fecha));
@@ -3171,83 +3385,48 @@
                     let vA = parseDateToInt(a.fecha_registro), vB = parseDateToInt(b.fecha_registro);
                     return vB - vA;
                 }).forEach(c => {
+                    const dif = toNum(c.diferencia);
+                    const difColor = Math.abs(dif) < 0.005 ? 'text-gray-400' : (dif < 0 ? 'text-red-600' : 'text-green-600');
+                    const saldoFinal = (c.saldo_final === undefined || c.saldo_final === null || c.saldo_final === '')
+                        ? toNum(c.total_recaudado) - toNum(c.efectivo_entregado)
+                        : toNum(c.saldo_final);
                     ct.innerHTML += `<tr class="hover:bg-gray-50">
                         <td class="p-3 text-xs text-gray-500 font-mono"><div class="font-bold text-gray-700">${c.id}</div>${formatDisplayDate(c.fecha_registro)}</td>
                         <td class="p-3 text-sm font-bold text-primary">${c.mes_año}</td>
+                        <td class="p-3 text-right text-gray-500">${c.efectivo_esperado === undefined || c.efectivo_esperado === '' ? '-' : fMoney(c.efectivo_esperado)}</td>
                         <td class="p-3 text-right font-black text-gray-600">${fMoney(c.total_recaudado)}</td>
-                        <td class="p-3 text-right font-black text-blue-600">${fMoney(c.base_caja_sencillo)}</td>
+                        <td class="p-3 text-right font-bold ${difColor}">${fMoney(dif)}</td>
                         <td class="p-3 text-right font-black text-green-600">${fMoney(c.efectivo_entregado)}</td>
+                        <td class="p-3 text-right font-black text-blue-600">${fMoney(saldoFinal)}</td>
                         <td class="p-3 text-xs text-gray-500 max-w-xs truncate" title="${c.observaciones || ''}">${c.observaciones || '-'}</td>
                     </tr>`;
                 });
-                if(!cFiltered.length) ct.innerHTML = `<tr><td colspan="6" class="p-3 text-center text-gray-500">Sin registros de cierre</td></tr>`;
+                if(!cFiltered.length) ct.innerHTML = `<tr><td colspan="8" class="p-3 text-center text-gray-500">Sin registros de cierre</td></tr>`;
             }
         }
 
         window.exportVentasCSV = () => {
-            let csvContent = "Recibo No.,Fecha,Cliente,Total,Estado\n";
-            const ds = document.getElementById('fin-date-start')?.value;
-            const de = document.getElementById('fin-date-end')?.value;
-            const checkDate = (dStr) => {
-                if(!ds && !de) return true;
-                if(!dStr) return false;
-                let dsN = parseDateToInt(ds);
-                let deN = parseDateToInt(de);
-                let dN = parseDateToInt(dStr);
-                if (dsN > 99999999) dsN = Math.floor(dsN / 1000000);
-                if (deN > 99999999) deN = Math.floor(deN / 1000000);
-                if (dN > 99999999) dN = Math.floor(dN / 1000000);
-                
-                if(!dsN && !deN) return true;
-                if(!dN) return false;
-                if(dsN && deN) return dN >= dsN && dN <= deN;
-                if(dsN) return dN >= dsN;
-                if(deN) return dN <= deN;
-                return true;
-            };
+            let csvContent = "Recibo No.,Fecha,Cliente,Metodo de Pago,Total,Estado\n";
+            const checkDate = makeDateFilter(document.getElementById('fin-date-start')?.value, document.getElementById('fin-date-end')?.value);
             const filtered = (DB.Ventas_Facturas || []).filter(x => checkDate(x.Fecha));
-            
+
             filtered.forEach(fac => {
                 const id = fac.ID_Factura || '';
                 const date = formatDisplayDate(fac.Fecha);
                 const cliente = (fac.Cliente_Nombre || '').replace(/"/g, '""');
+                const metodo = fac.Metodo_Pago || 'Efectivo';
                 const total = Number(fac.Total_Pagar || 0).toFixed(2);
-                const estado = fac.Estado_Pago || '';
-                csvContent += `"${id}","${date}","${cliente}",${total},"${estado}"\n`;
+                const estado = fac.Estatus || fac.Estado_Pago || '';
+                csvContent += `"${id}","${date}","${cliente}","${metodo}",${total},"${estado}"\n`;
             });
-            
-            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Reporte_Ventas_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+
+            downloadCSV('Reporte_Ventas', csvContent);
             showToast("Reporte Ventas Exportado", "success");
         };
 
         window.exportGastosCSV = () => {
             let csvContent = "Fecha,Ref,Concepto,Tipo,Monto\n";
-            const ds = document.getElementById('fin-date-start')?.value;
-            const de = document.getElementById('fin-date-end')?.value;
-            const checkDate = (dStr) => {
-                if(!ds && !de) return true;
-                if(!dStr) return false;
-                let dsN = parseDateToInt(ds);
-                let deN = parseDateToInt(de);
-                let dN = parseDateToInt(dStr);
-                if (dsN > 99999999) dsN = Math.floor(dsN / 1000000);
-                if (deN > 99999999) deN = Math.floor(deN / 1000000);
-                if (dN > 99999999) dN = Math.floor(dN / 1000000);
-                
-                if(!dsN && !deN) return true;
-                if(!dN) return false;
-                if(dsN && deN) return dN >= dsN && dN <= deN;
-                if(dsN) return dN >= dsN;
-                if(deN) return dN <= deN;
-                return true;
-            };
+            const checkDate = makeDateFilter(document.getElementById('fin-date-start')?.value, document.getElementById('fin-date-end')?.value);
             const filtered = (DB.Gastos || []).filter(x => checkDate(x.Fecha));
             
             filtered.forEach(g => {
@@ -3259,15 +3438,8 @@
                 const monto = Number(g.Monto || 0).toFixed(2);
                 csvContent += `"${date}","${ref}","${concepto}","${tipo}",${monto}\n`;
             });
-            
-            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Reporte_Gastos_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+
+            downloadCSV('Reporte_Gastos', csvContent);
             showToast("Reporte Gastos Exportado", "success");
         };
 
@@ -3283,7 +3455,7 @@
                 const marca = (p.Marca || '').replace(/"/g, '""');
                 const cat = (catName || '').replace(/"/g, '""');
                 const costo = Number(p.Costo_Compra || 0);
-                const mrg = Number(p.Margen || 0);
+                const mrg = Number(p.Margen_Ganancia || 0);
                 const precio = Number(p.Precio_Venta || 0);
                 const stock = Number(p.Existencias || 0);
                 const ct = stock * costo;
@@ -3292,14 +3464,7 @@
                 csvContent += `"${nombre}","${marca}","${cat}",${costo},${mrg},${precio},${stock},${ct},${vv},${ge}\n`;
             });
 
-            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Reporte_Inventario_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            downloadCSV('Reporte_Inventario', csvContent);
             showToast("Reporte Inventario Exportado", "success");
         };
 
@@ -3308,6 +3473,7 @@
             tc.innerHTML = '';
             let uniqueClients = {};
             (DB.Ventas_Facturas || []).forEach(f => {
+                if (ventaEsAnulada(f)) return;
                 let emailVal = f.Cliente_Email || f['Cliente Email'] || f.cliente_email || f.email || f.Email;
                 if (!emailVal) {
                     for (let k in f) { if (k.toLowerCase().includes('email')) { emailVal = f[k]; break; } }
@@ -3360,15 +3526,7 @@
                 }
             });
             
-            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Reporte_Clientes_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            downloadCSV('Reporte_Clientes', csvContent);
             showToast("Directorio de Clientes Exportado", "success");
         };
 
@@ -3573,13 +3731,13 @@
                 data.Timestamp = DB.Tickets_Tareas[tIdx].Timestamp;
             }
 
-            if (data.Estado === 'En Proceso' && (!tIdx || DB.Tickets_Tareas[tIdx].Estado !== 'En Proceso')) {
+            if (data.Estado === 'En Proceso' && (tIdx === -1 || DB.Tickets_Tareas[tIdx].Estado !== 'En Proceso')) {
                 data.Fecha_Proceso = sysTime(true);
             } else if (tIdx > -1) {
                 data.Fecha_Proceso = DB.Tickets_Tareas[tIdx].Fecha_Proceso || '';
             }
 
-            if (data.Estado === 'Completada' && (!tIdx || DB.Tickets_Tareas[tIdx].Estado !== 'Completada')) {
+            if (data.Estado === 'Completada' && (tIdx === -1 || DB.Tickets_Tareas[tIdx].Estado !== 'Completada')) {
                 data.Fecha_Completado = sysTime(true); 
             } else if (tIdx > -1) {
                 data.Fecha_Completado = DB.Tickets_Tareas[tIdx].Fecha_Completado || '';
@@ -3610,25 +3768,135 @@
             if(!tb.innerHTML) tb.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">No hay registros de auditora.</td></tr>`;
         }
 
+        // --- EFECTIVO EN CAJA -----------------------------------------------
+        const CFG_CAJA_BASE = 'CajaBaseInicial';
+        const CFG_CAJA_FECHA = 'CajaFechaInicio';
+
+        const getConfigValor = (clave, porDefecto = '') => {
+            const c = (DB.Configuracion || []).find(x => String(x.Clave).trim() === clave);
+            return (c && c.Valor !== undefined && c.Valor !== '') ? c.Valor : porDefecto;
+        };
+
+        const getCajaOpts = () => ({
+            baseInicial: getConfigValor(CFG_CAJA_BASE, 0),
+            fechaBase: getConfigValor(CFG_CAJA_FECHA, '')
+        });
+
+        const renderCajaPanel = window.renderCajaPanel = () => {
+            const elSaldo = document.getElementById('caja-saldo');
+            if (!elSaldo) return;
+
+            const e = calcularEstadoCaja(DB, getCajaOpts());
+            elSaldo.innerText = fMoney(e.saldo);
+            elSaldo.className = 'text-4xl font-black mt-1 leading-none ' + (e.saldo < 0 ? 'text-red-400' : 'text-white');
+
+            document.getElementById('caja-lbl-ancla').innerText = e.anclaEtiqueta;
+            document.getElementById('caja-ancla').innerText = fMoney(e.ancla);
+            document.getElementById('caja-ventas').innerText = fMoney(e.ventasEfectivo);
+            document.getElementById('caja-gastos').innerText = fMoney(e.gastos);
+            document.getElementById('caja-ganancia').innerText = fMoney(e.gananciaBruta);
+
+            const desde = document.getElementById('caja-desde');
+            if (!e.hayBase) {
+                desde.innerHTML = '<span class="text-yellow-400 font-bold">Falta la base: tocá "Ajustar base" para arrancar el conteo</span>';
+            } else if (e.anclaFecha) {
+                desde.innerText = `Movimientos desde ${formatDisplayDate(e.anclaFecha)}`;
+            } else {
+                desde.innerText = 'Movimientos desde el inicio del historial';
+            }
+        };
+
+        window.openCajaBase = () => {
+            if(!checkUserActive()) return;
+            document.getElementById('caja-base-monto').value = toNum(getConfigValor(CFG_CAJA_BASE, 0));
+            document.getElementById('caja-base-fecha').value = String(getConfigValor(CFG_CAJA_FECHA, '')).split(' ')[0];
+            openModal('mod-caja-base');
+        };
+
+        window.saveCajaBase = async () => {
+            if(!checkUserActive()) return;
+            const monto = Number(document.getElementById('caja-base-monto').value || 0);
+            const fecha = document.getElementById('caja-base-fecha').value;
+            if (!fecha) return showToast("Elegí desde qué fecha arranca el conteo", "error");
+
+            setConfigLocal(CFG_CAJA_BASE, monto);
+            setConfigLocal(CFG_CAJA_FECHA, fecha);
+            renderCajaPanel();
+            closeModal('mod-caja-base');
+            showToast("Base de caja guardada");
+
+            await apiCall('updateConfig', { configData: { [CFG_CAJA_BASE]: monto, [CFG_CAJA_FECHA]: fecha } });
+            logAudit('Finanzas', 'Base de Caja', `Base ${fMoney(monto)} desde ${fecha}`);
+        };
+
         // --- CIERRE DE CAJA ---
         window.openCierreCaja = () => {
             if(!checkUserActive()) return;
+            const e = calcularEstadoCaja(DB, getCajaOpts());
+            const esperadoEl = document.getElementById('caja-esperado');
+            esperadoEl.dataset.value = e.saldo;
+            esperadoEl.innerText = fMoney(e.saldo);
+            document.getElementById('caja-esperado-detalle').innerText =
+                `${e.anclaEtiqueta} ${fMoney(e.ancla)} + ventas en efectivo ${fMoney(e.ventasEfectivo)} - gastos ${fMoney(e.gastos)}`;
+
+            const ultimo = (DB.Caja_Mensual || []).slice()
+                .sort((a,b) => parseDateToInt(a.fecha_registro) - parseDateToInt(b.fecha_registro)).pop();
+
             document.getElementById('caja-fisico').value = '';
-            document.getElementById('caja-sencillo').value = '';
-            document.getElementById('caja-entregar').value = '';
+            document.getElementById('caja-sencillo').value = ultimo ? toNum(ultimo.base_caja_sencillo) : 0;
+            const entregarEl = document.getElementById('caja-entregar');
+            entregarEl.value = '';
+            delete entregarEl.dataset.touched;
             document.getElementById('caja-obs').value = '';
+
+            recalcCierre();
             openModal('modal-caja');
+        };
+
+        // Recalcula diferencia, sugerencia de entrega y saldo que queda en caja.
+        window.recalcCierre = () => {
+            const esperado = Number(document.getElementById('caja-esperado').dataset.value || 0);
+            const fisicoRaw = document.getElementById('caja-fisico').value;
+            const fisico = Number(fisicoRaw || 0);
+            const sencillo = Number(document.getElementById('caja-sencillo').value || 0);
+            const entregarEl = document.getElementById('caja-entregar');
+
+            if (!entregarEl.dataset.touched) {
+                entregarEl.value = fisicoRaw === '' ? '' : Math.max(0, Number((fisico - sencillo).toFixed(2)));
+            }
+            const entregar = Number(entregarEl.value || 0);
+
+            const dif = fisicoRaw === '' ? 0 : Number((fisico - esperado).toFixed(2));
+            const difEl = document.getElementById('caja-diferencia');
+            difEl.dataset.value = dif;
+            difEl.innerText = (dif > 0 ? '+' : '') + fMoney(dif);
+            difEl.className = 'text-lg font-black ' + (Math.abs(dif) < 0.005 ? 'text-gray-500' : (dif < 0 ? 'text-red-600' : 'text-green-600'));
+
+            const saldoFinal = Number((fisico - entregar).toFixed(2));
+            const sfEl = document.getElementById('caja-saldo-final');
+            sfEl.dataset.value = saldoFinal;
+            sfEl.innerText = fMoney(saldoFinal);
         };
 
         window.saveCierreCaja = async () => {
             if(!checkUserActive()) return;
-            const fisico = Number(document.getElementById('caja-fisico').value) || 0;
+            const fisicoRaw = document.getElementById('caja-fisico').value;
+            if (fisicoRaw === '') return showToast("Anotá el efectivo físico que contaste", "error");
+
+            const fisico = Number(fisicoRaw) || 0;
             const sencillo = Number(document.getElementById('caja-sencillo').value) || 0;
             const entregar = Number(document.getElementById('caja-entregar').value) || 0;
+            const esperado = Number(document.getElementById('caja-esperado').dataset.value || 0);
+            const diferencia = Number((fisico - esperado).toFixed(2));
+            const saldoFinal = Number((fisico - entregar).toFixed(2));
             const obs = document.getElementById('caja-obs').value.trim();
 
-            document.getElementById('btn-save-caja').innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
-            document.getElementById('btn-save-caja').disabled = true;
+            if (entregar > fisico) return showToast("No podés entregar más de lo que hay contado en caja", "error");
+            if (Math.abs(diferencia) >= 0.01 && !obs) return showToast("Hay diferencia con lo esperado: escribí una observación", "error");
+
+            const btn = document.getElementById('btn-save-caja');
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+            btn.disabled = true;
 
             const ts = sysTime();
             const dateParts = ts.split(' ')[0].split(/[\/-]/);
@@ -3642,21 +3910,26 @@
                 id: 'CAJ-' + Date.now(),
                 fecha_registro: ts,
                 mes_año: mes_ano,
+                efectivo_esperado: esperado,
                 total_recaudado: fisico,
                 base_caja_sencillo: sencillo,
                 efectivo_entregado: entregar,
-                diferencia: 0,
+                diferencia: diferencia,
+                saldo_final: saldoFinal,
+                usuario: getActiveUserName(),
                 observaciones: obs
             };
 
             try {
                 const r = await apiCall('crud', { sheetName: 'Caja_Mensual', operation: 'create', rowData: payload, idField: 'id', idValue: payload.id });
-                if (r.status === 'success') {
+                // apiCall devuelve null cuando la peticion quedo en la cola offline: el cierre igual vale.
+                if (!r || r.status === 'success') {
                     if(!DB.Caja_Mensual) DB.Caja_Mensual = [];
                     DB.Caja_Mensual.push(payload);
-                    await logAudit('Finanzas', 'Cierre de Caja', `Físico reportado: Q${fisico.toFixed(2)}. Entregado: Q${entregar.toFixed(2)}`);
-                    showToast("Cierre de caja procesado correctamente.");
+                    logAudit('Finanzas', 'Cierre de Caja', `Esperado Q${esperado.toFixed(2)} / contado Q${fisico.toFixed(2)} / diferencia Q${diferencia.toFixed(2)} / entregado Q${entregar.toFixed(2)}`);
+                    showToast("Cierre procesado. La caja arranca de nuevo en " + fMoney(saldoFinal));
                     closeModal('modal-caja');
+                    renderFinanzas();
                 } else {
                     showToast(r.message || "Error al procesar cierre", "error");
                 }
@@ -3664,19 +3937,26 @@
                 console.error(e);
                 showToast("Error de conexión", "error");
             } finally {
-                document.getElementById('btn-save-caja').innerHTML = '<i class="fa-solid fa-lock mr-2"></i> Procesar Cierre';
-                document.getElementById('btn-save-caja').disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-lock mr-2"></i> Procesar Cierre';
+                btn.disabled = false;
             }
         };
 
         // --- TICKETS Y TAREAS ---
+        // Guarda una clave de Configuracion en la copia local (la nube va aparte)
+        const setConfigLocal = (clave, valor) => {
+            if (!DB.Configuracion) DB.Configuracion = [];
+            const i = DB.Configuracion.findIndex(c => String(c.Clave).trim() === clave);
+            if (i > -1) DB.Configuracion[i].Valor = valor;
+            else DB.Configuracion.push({ Clave: clave, Valor: valor });
+        };
+
         const saveConfig = window.saveConfig = async () => {
             if(!checkUserActive()) return;
             const nom = document.getElementById('cfg-nombre').value;
             if(!nom) return;
-            
-            const cIdx = DB.Configuracion.findIndex(c => c.Clave === 'StoreName');
-            if(cIdx > -1) DB.Configuracion[cIdx].Valor = nom; else DB.Configuracion.push({Clave: 'StoreName', Valor: nom});
+
+            setConfigLocal('StoreName', nom);
             applyConfig(); showToast("Ajustes globales guardados."); logAudit('AJUSTES', 'CONFIG GUARDADA', `Config guardada por Admin`);
 
             apiCall('updateConfig', { configData: { 'StoreName': nom } });
@@ -3689,12 +3969,17 @@
             DB.Auditoria_Logs.push(l);
             apiCall('crud', { sheetName: 'Auditoria_Logs', operation: 'create', rowData: l, idField: 'Timestamp', idValue: l.Timestamp });
         };
-const logTime = window.logTime = async (action) => {
-            const ts = sysTime();
+        const logTime = window.logTime = async (action) => {
+            const registro = {
+                ID_Registro: 'AST-' + Date.now(),
+                Usuario_Email: getActiveUserName(),
+                Tipo_Accion: action,
+                Timestamp: sysTime()
+            };
             if(!DB.Asistencia_Usuarios) DB.Asistencia_Usuarios = [];
-            DB.Asistencia_Usuarios.push({ ID_Registro: 'AST-'+Date.now(), Usuario_Email: getActiveUserName(), Tipo_Accion: action, Timestamp: ts });
+            DB.Asistencia_Usuarios.push(registro);
             showToast(`Registro: ${action.replace('_',' ')}`);
-            apiCall('crud', { sheetName: 'Asistencia_Usuarios', operation: 'create', rowData: { ID_Registro: 'AST-'+Date.now(), Usuario_Email: getActiveUserName(), Tipo_Accion: action, Timestamp: ts }, idField: 'ID_Registro', idValue: 'AST-'+Date.now() });
+            apiCall('crud', { sheetName: 'Asistencia_Usuarios', operation: 'create', rowData: registro, idField: 'ID_Registro', idValue: registro.ID_Registro });
         };
 
         // AUTH FIREBASE
