@@ -45,6 +45,8 @@
 
         .hidden-view { display: none !important; }
         body.role-user .admin-only { display: none !important; }
+        .cajero-only { display: none; }
+        body.role-user .cajero-only { display: block; }
         .animate-fade { animation: fadeIn 0.3s ease forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -1041,7 +1043,7 @@
                 <button onclick="closeModal('modal-caja')" class="text-gray-400 hover:text-red-500"><i class="fa-solid fa-times text-xl"></i></button>
             </div>
             <form id="form-caja" onsubmit="event.preventDefault(); saveCierreCaja();" class="p-6 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 flex justify-between items-center">
+                <div class="admin-only bg-gray-50 border border-gray-200 rounded-lg p-4 flex justify-between items-center">
                     <div>
                         <p class="text-[11px] font-bold text-gray-500 uppercase">Efectivo que debería haber</p>
                         <p class="text-[10px] text-gray-400" id="caja-esperado-detalle">&ndash;</p>
@@ -1049,13 +1051,19 @@
                     <p class="text-2xl font-black text-primary" id="caja-esperado" data-value="0">Q 0.00</p>
                 </div>
 
+                <p class="cajero-only text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-3 leading-relaxed">
+                    <i class="fa-solid fa-circle-info mr-1 text-primary"></i>
+                    Contá el efectivo y anotá el total tal como te dio. No adivines ni ajustes:
+                    si hay diferencia, se explica en las observaciones.
+                </p>
+
                 <div class="grid grid-cols-1 gap-4">
                     <div class="flex flex-col gap-1">
                         <label class="text-xs font-bold text-gray-500">EFECTIVO FÍSICO EN CAJA (CONTADO MANUALMENTE)</label>
                         <input type="number" step="0.01" id="caja-fisico" class="input-base text-lg font-bold" placeholder="0.00" oninput="recalcCierre()" required>
                     </div>
 
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex justify-between items-center">
+                    <div class="admin-only bg-gray-50 border border-gray-200 rounded-lg p-3 flex justify-between items-center">
                         <span class="text-xs font-bold text-gray-500 uppercase">Diferencia (físico &minus; esperado)</span>
                         <span class="text-lg font-black text-gray-500" id="caja-diferencia" data-value="0">Q 0.00</span>
                     </div>
@@ -1389,7 +1397,7 @@
         // Un recibo anulado no es venta: no suma a caja, ni a ventas, ni a ganancia.
         const ventaEsAnulada = (f) => String((f && f.Estatus) || '').trim().toLowerCase() === 'cancelado';
 
-        // Solo el efectivo entra al cajon. Tarjeta y transferencia van al banco.
+        // Solo el efectivo entra a la caja. Tarjeta y transferencia van al banco.
         const ventaEsEfectivo = (f) => {
             const m = String((f && f.Metodo_Pago) || 'Efectivo').trim().toLowerCase();
             return m === '' || m === 'efectivo';
@@ -3892,7 +3900,12 @@
             const obs = document.getElementById('caja-obs').value.trim();
 
             if (entregar > fisico) return showToast("No podés entregar más de lo que hay contado en caja", "error");
-            if (Math.abs(diferencia) >= 0.01 && !obs) return showToast("Hay diferencia con lo esperado: escribí una observación", "error");
+            if (Math.abs(diferencia) >= 0.01 && !obs) {
+                const aviso = (typeof userRole !== 'undefined' && userRole === 'admin')
+                    ? "Hay diferencia con lo esperado: escribí una observación"
+                    : "Antes de cerrar, escribí una observación de cómo estuvo el turno";
+                return showToast(aviso, "error");
+            }
 
             const btn = document.getElementById('btn-save-caja');
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
