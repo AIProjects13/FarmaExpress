@@ -1233,7 +1233,7 @@
         const db = getFirestore(app);
         
         // URL DE APPS SCRIPT DESPLEGADO
-        const APP_BUILD = "2026-08-03-diag";
+        const APP_BUILD = "2026-08-03-rastro";
         console.log("%cFarmacia OS — build " + APP_BUILD, "background:#0B192C;color:#00D1FF;padding:2px 6px;border-radius:3px;font-weight:bold");
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzU_PgBGVnu30ZtwWu1iL8R0HpF57HaIACPBjGgTWqKJEO-DF07kQaDbn8yhvMYHx0j/exec"; 
 
@@ -3970,20 +3970,29 @@
         };
 
         window.saveCajaBase = async () => {
-            if(!checkUserActive()) return;
+            console.log('[BASE] 1. boton presionado');
+
+            if(!checkUserActive()) { console.warn('[BASE] CORTADO: no hay turno activo (checkUserActive dio false)'); return; }
+            console.log('[BASE] 2. turno ok, rol =', userRole);
+
             const monto = Number(document.getElementById('caja-base-monto').value || 0);
             const fecha = document.getElementById('caja-base-fecha').value;
-            if (!fecha) return showToast("Elegí desde qué fecha arranca el conteo", "error");
+            console.log('[BASE] 3. monto =', monto, '| fecha del formulario =', fecha);
+
+            if (!fecha) { console.warn('[BASE] CORTADO: no se eligió fecha'); return showToast("Elegí desde qué fecha arranca el conteo", "error"); }
 
             // Si la fecha elegida es HOY, se guarda con la hora exacta de este momento.
             // Si solo se guardara el dia, el conteo arrancaria a medianoche y volveria
             // a tragarse todo lo que se registro hoy mas temprano (por ejemplo la carga
             // de inventario). Para fechas pasadas se cuenta el dia completo.
             const fechaGuardar = (fecha === sysTime(true)) ? sysTime() : (fecha + ' 00:00:00');
+            console.log('[BASE] 4. hoy es', sysTime(true), '| se va a guardar la fecha', fechaGuardar);
 
             // Primero se refleja en pantalla para que se vea el efecto de una vez...
             setConfigLocal(CFG_CAJA_BASE, monto);
             setConfigLocal(CFG_CAJA_FECHA, fechaGuardar);
+            console.log('[BASE] 5. guardado en la copia local. Configuracion ahora:', JSON.parse(JSON.stringify(DB.Configuracion || [])));
+            console.log('[BASE] 6. estado calculado del panel:', calcularEstadoCaja(DB, getCajaOpts()));
             renderCajaPanel();
             closeModal('mod-caja-base');
 
@@ -3991,7 +4000,9 @@
             // Antes se decia "guardada" antes de saberlo, y por eso parecia
             // que el boton no hacia nada.
             try {
+                console.log('[BASE] 7. enviando a la hoja...');
                 const r = await apiCall('updateConfig', { configData: { [CFG_CAJA_BASE]: monto, [CFG_CAJA_FECHA]: fechaGuardar } });
+                console.log('[BASE] 8. respuesta de la hoja:', r);
                 if (r === null) {
                     showToast('Base aplicada en pantalla, pero quedó PENDIENTE de subir a la hoja.', 'error');
                 } else {
