@@ -720,6 +720,14 @@
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Proveedor / Notas</label>
                     <input type="text" id="rst-notas" class="input-base" placeholder="Opcional...">
                 </div>
+                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="rst-fue-caja" class="w-4 h-4 accent-primary">
+                        <span class="text-xs font-bold text-blue-700">¿Pagaste esta compra HOY con dinero de caja?</span>
+                    </label>
+                    <p class="text-[10px] text-blue-600 mt-1">✅ SI = Pagaste hoy con efectivo</p>
+                    <p class="text-[10px] text-blue-600">❌ NO = Compra al crédito o pago después</p>
+                </div>
             </div>
             <div class="p-5 border-t border-gray-200 flex gap-3 bg-gray-50">
                 <button type="button" onclick="closeModal('mod-abastecer')" class="flex-1 bg-white border border-gray-300 text-gray-700 py-2 rounded-lg font-bold hover:bg-gray-50">Cancelar</button>
@@ -768,7 +776,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Existencias Iniciales</label>
-                        <input type="number" id="prd-stock" class="input-base" value="0" required>
+                        <input type="number" id="prd-stock" class="input-base" value="0" oninput="document.getElementById('prd-caja-section').classList.toggle('hidden', this.value == 0 || this.value == '')" required>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Alerta Mínima</label>
@@ -807,6 +815,16 @@
                         </div>
                         <p class="col-span-3 text-[10px] text-gray-500 mt-1">Si vendes por ejemplo una caja de 10 blisters a Q100, y quieres vender 1 blister suelto a Q12: Tipo="Blíster", Cantidad=10, Precio=12.</p>
                     </div>
+                </div>
+
+                <!-- Pregunta sobre caja si hay existencias iniciales -->
+                <div id="prd-caja-section" class="bg-green-50 p-4 rounded-xl border border-green-100 mt-4 hidden">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="prd-fue-caja" class="w-4 h-4 accent-primary">
+                        <span class="text-xs font-bold text-green-700">¿Este inventario inicial fue comprado con dinero de caja?</span>
+                    </label>
+                    <p class="text-[10px] text-green-600 mt-1">✅ SI = Se pagó con efectivo de caja</p>
+                    <p class="text-[10px] text-green-600">❌ NO = Fue al crédito, regalo, o inventario histórico</p>
                 </div>
             </div>
             <div class="p-5 border-t border-gray-200">
@@ -2398,6 +2416,10 @@
             document.getElementById('prd-frac-cant').value = '';
             document.getElementById('prd-frac-precio').value = '';
 
+            // Caja: inicializar como unchecked y ocultar
+            document.getElementById('prd-fue-caja').checked = false;
+            document.getElementById('prd-caja-section').classList.add('hidden');
+
             document.getElementById('mod-prod-title').innerText = "Nuevo Producto";
             calcMargen();
             openModal('mod-producto');
@@ -2430,6 +2452,7 @@
             document.getElementById('rst-costo').value = p.Costo_Compra;
             document.getElementById('rst-cantidad').value = '';
             document.getElementById('rst-notas').value = '';
+            document.getElementById('rst-fue-caja').checked = false; // Por defecto: NO es dinero de caja
             openModal('mod-abastecer');
         };
 
@@ -2474,7 +2497,8 @@
                 Tipo: 'Mercancía',
                 Concepto: `Ingreso de inventario: ${p.Nombre} [ID: ${p.ID_Producto}] (${cant} unds)`,
                 Monto: Number((cant * costo).toFixed(2)),
-                Usuario: getActiveUserName()
+                Usuario: getActiveUserName(),
+                Fue_De_Caja: document.getElementById('rst-fue-caja').checked ? 'SI' : 'NO'
             };
             if (!DB.Gastos) DB.Gastos = [];
             DB.Gastos.push(gastoCompra);
@@ -2545,10 +2569,10 @@
 
             if (existenciasAgregadas > 0) {
                 const costoMercancia = existenciasAgregadas * c;
-                const gastoData = { ID_Gasto: 'GST-'+Date.now(), Fecha: sysTime(), Tipo: 'Mercancía', Concepto: `Ingreso de inventario: ${data.Nombre} [ID: ${id}] (${existenciasAgregadas} unds)`, Monto: costoMercancia, Usuario: getActiveUserName() };
+                const gastoData = { ID_Gasto: 'GST-'+Date.now(), Fecha: sysTime(), Tipo: 'Mercancía', Concepto: `Ingreso de inventario: ${data.Nombre} [ID: ${id}] (${existenciasAgregadas} unds)`, Monto: costoMercancia, Usuario: getActiveUserName(), Fue_De_Caja: document.getElementById('prd-fue-caja').checked ? 'SI' : 'NO' };
                 DB.Gastos.push(gastoData);
                 apiCall('crud', { sheetName: 'Gastos', operation: 'create', rowData: gastoData, idField: 'ID_Gasto', idValue: gastoData.ID_Gasto });
-                logAudit('Finanzas', 'Crear Gasto', `Gasto Automático por Compra de Inventario: ${gastoData.Concepto} por Q${gastoData.Monto} [${gastoData.ID_Gasto}]`);
+                logAudit('Finanzas', 'Crear Gasto', `Gasto Automático por Compra de Inventario: ${gastoData.Concepto} por Q${gastoData.Monto} [${gastoData.ID_Gasto}] (Caja: ${gastoData.Fue_De_Caja})`);
             }
 
             renderProductos(); renderPosCatalog();
