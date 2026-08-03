@@ -1113,6 +1113,9 @@
                     <i class="fa-solid fa-circle-info mr-1 text-primary"></i>
                     Si ponés una fecha <b>posterior</b> al último cierre, esta base manda y todo lo anterior
                     deja de contar. Sirve para volver a arrancar limpio después de cargar inventario.
+                    <br><br>
+                    Si elegís <b>hoy</b>, el conteo arranca en este mismo instante: todo lo registrado
+                    antes de ahorita deja de contar.
                 </p>
                 <div class="flex flex-col gap-1">
                     <label class="text-xs font-bold text-gray-500 uppercase">Efectivo con el que arranca la caja</label>
@@ -1230,7 +1233,7 @@
         const db = getFirestore(app);
         
         // URL DE APPS SCRIPT DESPLEGADO
-        const APP_BUILD = "2026-08-03-url-nueva";
+        const APP_BUILD = "2026-08-03-base-hora";
         console.log("%cFarmacia OS — build " + APP_BUILD, "background:#0B192C;color:#00D1FF;padding:2px 6px;border-radius:3px;font-weight:bold");
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzU_PgBGVnu30ZtwWu1iL8R0HpF57HaIACPBjGgTWqKJEO-DF07kQaDbn8yhvMYHx0j/exec"; 
 
@@ -1577,7 +1580,8 @@
             
             payload._id = Date.now() + Math.random().toString(36).substr(2, 9);
             try {
-                const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const res = await fetch(`${SCRIPT_URL}?_cb=${Date.now()}`, { method: 'POST', cache: 'no-store', body: JSON.stringify(payload) });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
                 
                 if(data.status === 'error') {
@@ -1616,7 +1620,7 @@
             let pendingQueue = [];
             for (let i = 0; i < q.length; i++) {
                 try {
-                    const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(q[i]) });
+                    const res = await fetch(`${SCRIPT_URL}?_cb=${Date.now()}`, { method: 'POST', cache: 'no-store', body: JSON.stringify(q[i]) });
                     if (!res.ok) throw new Error("Error HTTP " + res.status);
                     const data = await res.json();
                     if(data.status === 'error') {
@@ -1723,8 +1727,12 @@
 
             // --- 1. Intento principal: POST ---
             try {
-                const res = await fetch(SCRIPT_URL, {
+                // El _cb hace la URL distinta cada vez y el cache:'no-store' impide
+                // que Chrome reutilice la redireccion guardada hacia googleusercontent.
+                // Esa redireccion vieja apuntaba a un destino muerto: de ahi el 404 fijo.
+                const res = await fetch(`${SCRIPT_URL}?_cb=${Date.now()}`, {
                     method: 'POST',
+                    cache: 'no-store',
                     body: JSON.stringify({ action: 'readAll', token: jwt, fullHistory: !!fullHistory })
                 });
                 const data = await leerRespuesta(res);
@@ -1739,7 +1747,7 @@
             // --- 2. Respaldo: GET con el token en la URL (método anterior) ---
             const authParam = jwt ? `&token=${jwt}` : '';
             const historyParam = fullHistory ? '&fullHistory=true' : '';
-            const res = await fetch(`${SCRIPT_URL}?sheetName=all&_cb=${Date.now()}${authParam}${historyParam}`);
+            const res = await fetch(`${SCRIPT_URL}?sheetName=all&_cb=${Date.now()}${authParam}${historyParam}`, { cache: 'no-store' });
             return await leerRespuesta(res);
         };
 
@@ -3924,14 +3932,20 @@
             const fecha = document.getElementById('caja-base-fecha').value;
             if (!fecha) return showToast("Elegí desde qué fecha arranca el conteo", "error");
 
+            // Si la fecha elegida es HOY, se guarda con la hora exacta de este momento.
+            // Si solo se guardara el dia, el conteo arrancaria a medianoche y volveria
+            // a tragarse todo lo que se registro hoy mas temprano (por ejemplo la carga
+            // de inventario). Para fechas pasadas se cuenta el dia completo.
+            const fechaGuardar = (fecha === sysTime(true)) ? sysTime() : (fecha + ' 00:00:00');
+
             setConfigLocal(CFG_CAJA_BASE, monto);
-            setConfigLocal(CFG_CAJA_FECHA, fecha);
+            setConfigLocal(CFG_CAJA_FECHA, fechaGuardar);
             renderCajaPanel();
             closeModal('mod-caja-base');
             showToast("Base de caja guardada");
 
-            await apiCall('updateConfig', { configData: { [CFG_CAJA_BASE]: monto, [CFG_CAJA_FECHA]: fecha } });
-            logAudit('Finanzas', 'Base de Caja', `Base ${fMoney(monto)} desde ${fecha}`);
+            await apiCall('updateConfig', { configData: { [CFG_CAJA_BASE]: monto, [CFG_CAJA_FECHA]: fechaGuardar } });
+            logAudit('Finanzas', 'Base de Caja', `Base ${fMoney(monto)} desde ${fechaGuardar}`);
         };
 
         // --- CIERRE DE CAJA ---
