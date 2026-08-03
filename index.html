@@ -910,6 +910,14 @@
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Monto *</label>
                     <input type="number" step="0.01" id="gst-monto" class="input-base text-lg font-bold text-red-500" required>
                 </div>
+                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="gst-fue-caja" class="w-4 h-4 accent-primary">
+                        <span class="text-xs font-bold text-blue-700">¿Este dinero salió de caja HOY?</span>
+                    </label>
+                    <p class="text-[10px] text-blue-600 mt-1">✅ SI = Dinero real (servicios, compras pagadas, etc.)</p>
+                    <p class="text-[10px] text-blue-600">❌ NO = Compras al crédito, devoluciones, inventario anterior, etc.</p>
+                </div>
             </div>
             <div class="p-5 border-t border-gray-200 flex gap-2">
                 <button type="button" onclick="closeModal('mod-gasto')" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-bold hover:bg-gray-300">Cancelar</button>
@@ -1518,7 +1526,11 @@
 
             (db.Gastos || []).forEach(g => {
                 if (desdeN && parseDateToInt(g.Fecha) <= desdeN) return;
-                gastos += toNum(g.Monto);
+                // SOLO contar gastos que fueron dinero real de caja
+                // Los gastos de "Ingreso de inventario" tienen Fue_De_Caja = NO o vacío
+                if (String(g.Fue_De_Caja).trim().toUpperCase() === 'SI' || g.Fue_De_Caja === 1 || g.Fue_De_Caja === true) {
+                    gastos += toNum(g.Monto);
+                }
             });
 
             return {
@@ -3713,6 +3725,7 @@
             document.getElementById('gst-concepto').value = '';
             document.getElementById('gst-monto').value = '';
             document.getElementById('gst-tipo').value = 'Operativo';
+            document.getElementById('gst-fue-caja').checked = false; // Por defecto: NO es dinero de caja
             openModal('mod-gasto');
         };
 
@@ -3723,6 +3736,7 @@
             document.getElementById('gst-concepto').value = g.Concepto;
             document.getElementById('gst-tipo').value = g.Tipo;
             document.getElementById('gst-monto').value = g.Monto;
+            document.getElementById('gst-fue-caja').checked = String(g.Fue_De_Caja).toUpperCase() === 'SI' || g.Fue_De_Caja === 1 || g.Fue_De_Caja === true;
             openModal('mod-gasto');
         };
 
@@ -3745,30 +3759,31 @@
             if(!checkUserActive()) return;
             const idToEdit = document.getElementById('gst-id').value;
             const isEdit = !!idToEdit;
-            
-            const data = { 
-                ID_Gasto: isEdit ? idToEdit : ('GST-'+Date.now()), 
-                Fecha: isEdit ? DB.Gastos.find(g => g.ID_Gasto === idToEdit)?.Fecha || sysTime() : sysTime(), 
-                Tipo: document.getElementById('gst-tipo').value, 
-                Concepto: document.getElementById('gst-concepto').value, 
-                Monto: document.getElementById('gst-monto').value, 
-                Usuario: isEdit ? DB.Gastos.find(g => g.ID_Gasto === idToEdit)?.Usuario || getActiveUserName() : getActiveUserName()
+
+            const data = {
+                ID_Gasto: isEdit ? idToEdit : ('GST-'+Date.now()),
+                Fecha: isEdit ? DB.Gastos.find(g => g.ID_Gasto === idToEdit)?.Fecha || sysTime() : sysTime(),
+                Tipo: document.getElementById('gst-tipo').value,
+                Concepto: document.getElementById('gst-concepto').value,
+                Monto: document.getElementById('gst-monto').value,
+                Usuario: isEdit ? DB.Gastos.find(g => g.ID_Gasto === idToEdit)?.Usuario || getActiveUserName() : getActiveUserName(),
+                Fue_De_Caja: document.getElementById('gst-fue-caja').checked ? 'SI' : 'NO'
             };
-            
+
             if(!data.Concepto || !data.Monto) return showToast("Datos incompletos","error");
-            
+
             if (isEdit) {
                 const idx = DB.Gastos.findIndex(x => x.ID_Gasto === idToEdit);
                 if (idx > -1) DB.Gastos[idx] = data;
             } else {
                 DB.Gastos.push(data);
             }
-            
+
             renderFinanzas(); renderDashboard();
-            closeModal('mod-gasto'); 
+            closeModal('mod-gasto');
             showToast(isEdit ? "Gasto Actualizado" : "Gasto Registrado");
             apiCall('crud', { sheetName: 'Gastos', operation: isEdit ? 'update' : 'create', rowData: data, idField: 'ID_Gasto', idValue: data.ID_Gasto });
-            logAudit('Finanzas', isEdit ? 'Editar Gasto' : 'Crear Gasto', `Gasto por Q${data.Monto}`);
+            logAudit('Finanzas', isEdit ? 'Editar Gasto' : 'Crear Gasto', `Gasto por Q${data.Monto} (Caja: ${data.Fue_De_Caja})`);
         };
 
         window.renderTickets = function renderTickets() {
