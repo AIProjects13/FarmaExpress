@@ -1233,7 +1233,7 @@
         const db = getFirestore(app);
         
         // URL DE APPS SCRIPT DESPLEGADO
-        const APP_BUILD = "2026-08-03-base-hora";
+        const APP_BUILD = "2026-08-03-grupos";
         console.log("%cFarmacia OS — build " + APP_BUILD, "background:#0B192C;color:#00D1FF;padding:2px 6px;border-radius:3px;font-weight:bold");
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzU_PgBGVnu30ZtwWu1iL8R0HpF57HaIACPBjGgTWqKJEO-DF07kQaDbn8yhvMYHx0j/exec"; 
 
@@ -1721,30 +1721,61 @@
         // (URL corta) pero la app no. En POST el token va en el cuerpo y no hay
         // limite de largo. El GET queda de respaldo por si el backend todavia
         // no se actualizo.
+        // Las 12 pestañas se piden en 3 grupos AL MISMO TIEMPO.
+        // Motivo: pedirlas todas juntas tardaba ~10 segundos y el intermediario
+        // de Google corta la respuesta y devuelve 404 cuando se pasa de tiempo.
+        // Cada grupo tarda ~3 segundos y no se corta. Ademas, si un grupo falla,
+        // se reintenta solo ese y no toda la carga.
+        const GRUPOS_HOJAS = [
+            ['Productos', 'Categorias', 'Paquetes', 'Configuracion'],
+            ['Ventas_Facturas', 'Gastos', 'Caja_Mensual', 'Inventario_Compras'],
+            ['Usuarios', 'Tickets_Tareas', 'Auditoria_Logs', 'Asistencia_Usuarios']
+        ];
+
+        const postJSON = async (cuerpo) => {
+            const res = await fetch(`${SCRIPT_URL}?_cb=${Date.now()}${Math.random()}`, {
+                method: 'POST',
+                cache: 'no-store',
+                body: JSON.stringify(cuerpo)
+            });
+            return await leerRespuesta(res);
+        };
+
         const pedirDatos = async (forceRefresh, fullHistory) => {
             let jwt = '';
             if (auth.currentUser) jwt = await auth.currentUser.getIdToken(forceRefresh);
 
-            // --- 1. Intento principal: POST ---
+            // --- 1. Metodo principal: por grupos, en paralelo ---
             try {
-                // El _cb hace la URL distinta cada vez y el cache:'no-store' impide
-                // que Chrome reutilice la redireccion guardada hacia googleusercontent.
-                // Esa redireccion vieja apuntaba a un destino muerto: de ahi el 404 fijo.
-                const res = await fetch(`${SCRIPT_URL}?_cb=${Date.now()}`, {
-                    method: 'POST',
-                    cache: 'no-store',
-                    body: JSON.stringify({ action: 'readAll', token: jwt, fullHistory: !!fullHistory })
-                });
-                const data = await leerRespuesta(res);
-                const msg = String(data.message || '');
-                // Si el backend viejo no conoce "readAll", se cae al GET de abajo.
-                if (!(data.status === 'error' && msg.indexOf('desconocida') > -1)) return data;
-                console.warn('El backend aún no soporta lectura por POST. Usando el método anterior.');
+                const respuestas = await Promise.all(GRUPOS_HOJAS.map(grupo =>
+                    postJSON({ action: 'readSome', sheets: grupo, token: jwt, fullHistory: !!fullHistory })
+                ));
+
+                const desconocida = respuestas.find(r => r.status === 'error' && String(r.message || '').indexOf('desconocida') > -1);
+                if (desconocida) {
+                    console.warn('El backend aún no soporta lectura por grupos. Usando el método anterior.');
+                } else {
+                    const malo = respuestas.find(r => r.status !== 'success');
+                    if (malo) throw new Error(malo.message || 'Respuesta inválida del servidor');
+
+                    let datos = {};
+                    respuestas.forEach(r => { datos = Object.assign(datos, r.data); });
+                    return { status: 'success', data: datos };
+                }
             } catch(e) {
-                console.warn('Lectura por POST falló (' + e.message + '). Probando por GET...');
+                console.warn('Lectura por grupos falló (' + e.message + '). Probando el método anterior...');
             }
 
-            // --- 2. Respaldo: GET con el token en la URL (método anterior) ---
+            // --- 2. Respaldo: todo de un golpe por POST ---
+            try {
+                const data = await postJSON({ action: 'readAll', token: jwt, fullHistory: !!fullHistory });
+                const msg = String(data.message || '');
+                if (!(data.status === 'error' && msg.indexOf('desconocida') > -1)) return data;
+            } catch(e) {
+                console.warn('Lectura completa por POST falló (' + e.message + '). Probando por GET...');
+            }
+
+            // --- 3. Ultimo respaldo: GET (método original) ---
             const authParam = jwt ? `&token=${jwt}` : '';
             const historyParam = fullHistory ? '&fullHistory=true' : '';
             const res = await fetch(`${SCRIPT_URL}?sheetName=all&_cb=${Date.now()}${authParam}${historyParam}`, { cache: 'no-store' });
