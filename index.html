@@ -1233,7 +1233,7 @@
         const db = getFirestore(app);
         
         // URL DE APPS SCRIPT DESPLEGADO
-        const APP_BUILD = "2026-08-03-get-grupos";
+        const APP_BUILD = "2026-08-03-cache";
         console.log("%cFarmacia OS — build " + APP_BUILD, "background:#0B192C;color:#00D1FF;padding:2px 6px;border-radius:3px;font-weight:bold");
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzU_PgBGVnu30ZtwWu1iL8R0HpF57HaIACPBjGgTWqKJEO-DF07kQaDbn8yhvMYHx0j/exec"; 
 
@@ -1580,8 +1580,7 @@
             
             payload._id = Date.now() + Math.random().toString(36).substr(2, 9);
             try {
-                const res = await fetch(`${SCRIPT_URL}?_cb=${Date.now()}`, { method: 'POST', cache: 'no-store', body: JSON.stringify(payload) });
-                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const data = await res.json();
                 
                 if(data.status === 'error') {
@@ -1610,28 +1609,53 @@
             updateOfflineBadge(q.length);
         }
 
+        // Maximo de reintentos por pendiente. Sin este tope, una peticion que
+        // el servidor nunca acepta se reintenta en cada sincronizacion, se forma
+        // en la fila de Google y hace que la carga tarde minutos. Es lo que
+        // convertia dos pendientes atascados en una app lentisima.
+        const MAX_INTENTOS_COLA = 3;
+        let colaEnCurso = false;
+
         async function processOfflineQueue() {
+            if (colaEnCurso) return; // nunca dos pasadas al mismo tiempo
             let q = [];
             try { q = JSON.parse(localStorage.getItem('farmacia_offline_queue') || '[]'); } catch(e) { localStorage.setItem('farmacia_offline_queue', '[]'); }
             if (!Array.isArray(q) || q.length === 0) {
                 updateOfflineBadge(0);
                 return;
             }
+
+            colaEnCurso = true;
             let pendingQueue = [];
+            let descartados = 0;
+
             for (let i = 0; i < q.length; i++) {
+                const item = q[i];
                 try {
-                    const res = await fetch(`${SCRIPT_URL}?_cb=${Date.now()}`, { method: 'POST', cache: 'no-store', body: JSON.stringify(q[i]) });
+                    const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(item) });
                     if (!res.ok) throw new Error("Error HTTP " + res.status);
                     const data = await res.json();
                     if(data.status === 'error') {
-                        console.error("Error lógico en backend para request:", q[i], data.message);
+                        console.error("Error lógico en backend para request:", item, data.message);
                     }
                 } catch(e) {
-                    pendingQueue.push(q[i]);
+                    item._intentos = (item._intentos || 0) + 1;
+                    if (item._intentos >= MAX_INTENTOS_COLA) {
+                        console.error('Pendiente descartado tras ' + item._intentos + ' intentos:', item);
+                        descartados++;
+                    } else {
+                        pendingQueue.push(item);
+                    }
                 }
             }
+
             localStorage.setItem('farmacia_offline_queue', JSON.stringify(pendingQueue));
             updateOfflineBadge(pendingQueue.length);
+            colaEnCurso = false;
+
+            if (descartados) {
+                showToast(descartados + ' cambio(s) no se pudieron guardar en la nube y se descartaron. Revisá que estén bien en la hoja.', 'error');
+            }
         }
 
         function updateOfflineBadge(count) {
@@ -1721,67 +1745,20 @@
         // (URL corta) pero la app no. En POST el token va en el cuerpo y no hay
         // limite de largo. El GET queda de respaldo por si el backend todavia
         // no se actualizo.
-        // Las 12 pestañas se piden en 3 grupos AL MISMO TIEMPO.
-        // Motivo: pedirlas todas juntas tardaba ~10 segundos y el intermediario
-        // de Google corta la respuesta y devuelve 404 cuando se pasa de tiempo.
-        // Cada grupo tarda ~3 segundos y no se corta. Ademas, si un grupo falla,
-        // se reintenta solo ese y no toda la carga.
-        const GRUPOS_HOJAS = [
-            ['Productos', 'Categorias', 'Paquetes', 'Configuracion'],
-            ['Ventas_Facturas', 'Gastos', 'Caja_Mensual', 'Inventario_Compras'],
-            ['Usuarios', 'Tickets_Tareas', 'Auditoria_Logs', 'Asistencia_Usuarios']
-        ];
-
-        const postJSON = async (cuerpo) => {
-            const res = await fetch(`${SCRIPT_URL}?_cb=${Date.now()}${Math.random()}`, {
-                method: 'POST',
-                cache: 'no-store',
-                body: JSON.stringify(cuerpo)
-            });
-            return await leerRespuesta(res);
-        };
-
-        const getJSON = async (extraParams) => {
-            const res = await fetch(`${SCRIPT_URL}?_cb=${Date.now()}${Math.random()}${extraParams}`, { cache: 'no-store' });
-            return await leerRespuesta(res);
-        };
-
-        // OJO CON EL ORDEN: primero GET, despues POST.
-        // En este montaje las lecturas por POST devuelven siempre 404 (Google
-        // corta la redireccion), mientras que las mismas lecturas por GET si
-        // pasan. Por eso el GET es el metodo principal y el POST quedo de
-        // respaldo. Las ESCRITURAS siguen yendo por POST y esas nunca han fallado.
+        // UNA SOLA PETICION DE LECTURA.
+        // Se probo pedir las pestañas en 3 grupos en paralelo y fue peor:
+        // Google atiende las peticiones de esta cuenta de una en una, asi que
+        // los grupos hacian fila entre ellos y ademas le quitaban el turno a
+        // las ventas. La velocidad ahora viene del cache del backend, no de
+        // partir la peticion.
         const pedirDatos = async (forceRefresh, fullHistory) => {
             let jwt = '';
             if (auth.currentUser) jwt = await auth.currentUser.getIdToken(forceRefresh);
             const authParam = jwt ? `&token=${encodeURIComponent(jwt)}` : '';
             const historyParam = fullHistory ? '&fullHistory=true' : '';
 
-            // --- 1. Metodo principal: GET por grupos, en paralelo ---
-            try {
-                const respuestas = await Promise.all(GRUPOS_HOJAS.map(grupo =>
-                    getJSON(`&sheets=${grupo.join(',')}${authParam}${historyParam}`)
-                ));
-
-                const malo = respuestas.find(r => r.status !== 'success');
-                if (malo) throw new Error(malo.message || 'Respuesta inválida del servidor');
-
-                let datos = {};
-                respuestas.forEach(r => { datos = Object.assign(datos, r.data); });
-                return { status: 'success', data: datos };
-            } catch(e) {
-                console.warn('Lectura por grupos falló (' + e.message + '). Probando todo de un golpe...');
-            }
-
-            // --- 2. Respaldo: GET de todas las pestañas juntas (método original) ---
-            try {
-                return await getJSON(`&sheetName=all${authParam}${historyParam}`);
-            } catch(e) {
-                console.warn('Lectura completa por GET falló (' + e.message + '). Probando por POST...');
-            }
-
-            // --- 3. Ultimo respaldo: POST ---
-            return await postJSON({ action: 'readAll', token: jwt, fullHistory: !!fullHistory });
+            const res = await fetch(`${SCRIPT_URL}?sheetName=all&_cb=${Date.now()}${authParam}${historyParam}`);
+            return await leerRespuesta(res);
         };
 
         const syncData = window.syncData = async (silent = false, forceRefresh = false, fullHistory = false) => {
