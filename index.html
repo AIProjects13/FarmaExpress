@@ -1230,6 +1230,8 @@
         const db = getFirestore(app);
         
         // URL DE APPS SCRIPT DESPLEGADO
+        const APP_BUILD = "2026-08-03-caja";
+        console.log("%cFarmacia OS — build " + APP_BUILD, "background:#0B192C;color:#00D1FF;padding:2px 6px;border-radius:3px;font-weight:bold");
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBNyZFSkb-MytO4CDcVWTPTxarfpQCj5RazzEJqhotIE-uFUOaJ6j-SujjXW6A7fMr/exec"; 
 
         // ESTADO GLOBAL
@@ -1660,50 +1662,123 @@
             if (!document.getElementById('tab-audit').classList.contains('hidden-view')) renderAudit();
         };
 
+        // --- COPIA LOCAL DE RESPALDO -------------------------------------
+        // Guarda la ultima carga buena. Si la nube falla al abrir la app,
+        // se muestran estos datos en vez de dejar la pantalla vacia.
+        const CACHE_KEY = 'farmacia_db_cache';
+
+        const guardarCacheDB = (data) => {
+            try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: data }));
+            } catch(e) {
+                // Si no cabe (localStorage lleno) no pasa nada: solo no habra respaldo.
+                console.warn('No se pudo guardar la copia local:', e.message);
+            }
+        };
+
+        const leerCacheDB = () => {
+            try {
+                const raw = localStorage.getItem(CACHE_KEY);
+                if (!raw) return null;
+                const c = JSON.parse(raw);
+                return (c && c.data) ? c : null;
+            } catch(e) { return null; }
+        };
+
+        const pausa = (ms) => new Promise(r => setTimeout(r, ms));
+
+        const pintarDB = () => {
+            if(!DB.Usuarios) DB.Usuarios = [];
+            if(!DB.Inventario_Compras) DB.Inventario_Compras = [];
+            applyConfig();
+            renderAll();
+            updateClientesDatalist();
+            const gLoader = document.getElementById('global-loader');
+            if (gLoader && gLoader.style.display !== 'none') {
+                gLoader.style.opacity = '0';
+                setTimeout(() => { gLoader.style.display = 'none'; }, 500);
+            }
+        };
+
+        // Una sola peticion de lectura. Devuelve los datos o lanza error.
+        const pedirDatos = async (forceRefresh, fullHistory) => {
+            let authParam = '';
+            if (auth.currentUser) {
+                const jwt = await auth.currentUser.getIdToken(forceRefresh);
+                authParam = `&token=${jwt}`;
+            }
+            const historyParam = fullHistory ? '&fullHistory=true' : '';
+            const res = await fetch(`${SCRIPT_URL}?sheetName=all&_cb=${Date.now()}${authParam}${historyParam}`);
+
+            // Google devuelve una pagina HTML cuando el script esta ocupado o
+            // falla temporalmente. Sin este chequeo, res.json() reventaba y la
+            // app se quedaba vacia sin volver a intentar.
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const texto = await res.text();
+            let data;
+            try { data = JSON.parse(texto); }
+            catch(e) { throw new Error('El servidor respondió algo que no son datos (probablemente estaba ocupado)'); }
+            return data;
+        };
+
         const syncData = window.syncData = async (silent = false, forceRefresh = false, fullHistory = false) => {
             if (!silent) setLoading(true);
-            try {
-                processOfflineQueue().catch(e => console.error("Offline queue error:", e));
-                
-                // --- SEGURIDAD: Obtener Token JWT ---
-                let authParam = '';
-                if (auth.currentUser) {
-                    try {
-                        const jwt = await auth.currentUser.getIdToken(forceRefresh);
-                        authParam = `&token=${jwt}`;
-                    } catch(e) { console.error("Error obteniendo token JWT", e); }
-                }
-                
-                const historyParam = fullHistory ? '&fullHistory=true' : '';
-                const res = await fetch(`${SCRIPT_URL}?sheetName=all&_cb=${Date.now()}${authParam}${historyParam}`);
-                const data = await res.json();
-                
-                if (data.status === 'error' && data.message && data.message.includes('ACCESO DENEGADO') && !forceRefresh) {
-                    console.log("Token expirado en syncData, intentando refrescar...");
-                    return await syncData(silent, true, fullHistory);
-                }
 
-                if(data.status === 'success') {
-                    console.log('Sync success, DB updated.');
-                    DB = Object.assign(DB, data.data);
-                    if(!DB.Usuarios) DB.Usuarios = [];
-                    if(!DB.Inventario_Compras) DB.Inventario_Compras = [];
+            const INTENTOS = 3;
+            let ultimoError = null;
+            let refrescarToken = forceRefresh;
 
-                    applyConfig();
-                    renderAll();
-                    updateClientesDatalist();
-                    
-                    // Ocultar loader global si existe
-                    const gLoader = document.getElementById('global-loader');
-                    if (gLoader && gLoader.style.display !== 'none') {
-                        gLoader.style.opacity = '0';
-                        setTimeout(() => { gLoader.style.display = 'none'; }, 500);
+            for (let intento = 1; intento <= INTENTOS; intento++) {
+                try {
+                    const data = await pedirDatos(refrescarToken, fullHistory);
+
+                    // Token vencido: se pide uno nuevo y se reintenta enseguida.
+                    if (data.status === 'error' && data.message && data.message.includes('ACCESO DENEGADO')) {
+                        if (!refrescarToken) { refrescarToken = true; continue; }
+                        throw new Error(data.message);
                     }
-                    document.getElementById('sync-status').classList.replace('text-gray-400', 'text-accent');
-                    setTimeout(() => document.getElementById('sync-status').classList.replace('text-accent', 'text-gray-400'), 2000);
-                } else { console.error('Backend Error:', data); if(!silent) showToast(data.error || 'Backend response invalid', 'error'); }
-            } catch(e) { console.error('Fetch Error:', e); if(!silent) showToast("Error de sincronización", 'error'); }
+
+                    if (data.status === 'success') {
+                        DB = Object.assign(DB, data.data);
+                        guardarCacheDB(data.data);
+                        pintarDB();
+                        const st = document.getElementById('sync-status');
+                        st.classList.replace('text-gray-400', 'text-accent');
+                        setTimeout(() => st.classList.replace('text-accent', 'text-gray-400'), 2000);
+
+                        // La cola de pendientes se envia DESPUES de cargar, no al
+                        // mismo tiempo: si van juntas compiten y se traban entre si.
+                        processOfflineQueue().catch(e => console.error("Offline queue error:", e));
+
+                        if (!silent) setLoading(false);
+                        return true;
+                    }
+
+                    throw new Error(data.error || data.message || 'Respuesta inválida del servidor');
+
+                } catch(e) {
+                    ultimoError = e;
+                    console.error(`Sync intento ${intento}/${INTENTOS} falló:`, e.message);
+                    if (intento < INTENTOS) await pausa(700 * intento); // 0.7s, luego 1.4s
+                }
+            }
+
+            // Se acabaron los intentos: se trabaja con la ultima copia buena.
+            const cache = leerCacheDB();
+            if (cache) {
+                DB = Object.assign(DB, cache.data);
+                pintarDB();
+                if (!silent) {
+                    const min = Math.round((Date.now() - cache.ts) / 60000);
+                    showToast(`Sin conexión con la base. Mostrando la última copia guardada (hace ${min} min). Tocá el botón de sincronizar para reintentar.`, 'error');
+                }
+            } else if (!silent) {
+                showToast('No se pudo cargar la información. Revisá tu internet y tocá el botón de sincronizar.', 'error');
+            }
+
+            console.error('Sync falló tras', INTENTOS, 'intentos:', ultimoError && ultimoError.message);
             if (!silent) setLoading(false);
+            return false;
         };
 
         function applyConfig() {
