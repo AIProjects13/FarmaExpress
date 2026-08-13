@@ -1,0 +1,27 @@
+﻿        body { background-color: #F3F4F6; color: #1F2937; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1F2937; border-radius: 10px; opacity: 0.3; }
+        ::-webkit-scrollbar-thumb:hover { background: #00D1FF; }
+
+        .hidden-view { display: none !important; }
+        body.role-user .admin-only { display: none !important; }
+        .cajero-only { display: none; }
+        body.role-user .cajero-only { display: block; }
+        .animate-fade { animation: fadeIn 0.3s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .input-base {
+            width: 100%; padding: 0.75rem 1rem; border: 1px solid #D1D5DB; border-radius: 0.5rem; 
+            background: #FFFFFF; color: #1F2937; outline: none; transition: all 0.2s;
+        }
+        .input-base:focus { border-color: #00D1FF; box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.2); }
+        .input-base:disabled { background-color: #F3F4F6; color: #9CA3AF; cursor: not-allowed; }
+        
+        .btn-accent { background-color: #00D1FF; color: #1F2937; font-weight: 700; padding: 0.75rem 1.5rem; border-radius: 0.5rem; transition: background-color 0.2s; }
+        .btn-accent:hover { background-color: #00A3CC; }
+
+        .modal-bg { opacity: 0; pointer-events: none; transition: opacity 0.3s; background: rgba(31, 41, 55, 0.6); backdrop-filter: blur(4px); }
+        .modal-bg.open { opacity: 1; pointer-events: auto; }
+        .modal-content { transform: scale(0.95); transition: transform 0.3s; }
+        .modal-bg.open .modal-content { transform: scale(1); }
