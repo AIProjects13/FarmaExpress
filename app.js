@@ -3010,12 +3010,10 @@
             btn.disabled = true;
 
             const ts = sysTime();
-            const dateParts = ts.split(' ')[0].split(/[\/-]/);
-            let mes_ano = ts;
-            if (dateParts.length === 3) {
-                if (dateParts[2].length === 4) mes_ano = dateParts[2] + '-' + dateParts[1].padStart(2,'0');
-                if (dateParts[0].length === 4) mes_ano = dateParts[0] + '-' + dateParts[1].padStart(2,'0');
-            }
+            // Extraer solo YYYY-MM de "YYYY-MM-DD HH:mm:ss" para mes_año
+            const soloFecha = ts.split(' ')[0]; // "YYYY-MM-DD"
+            const mesAnoPartes = soloFecha.split('-');
+            const mes_ano = mesAnoPartes[0] + '-' + mesAnoPartes[1]; // "YYYY-MM" sin hora
 
             // HALLAZGO 9: Usar generador de ID único
             const payload = {
