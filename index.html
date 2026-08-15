@@ -94,9 +94,6 @@
                     <a href="#" data-target="tab-fin" class="nav-btn flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-primary hover:bg-accent rounded-lg transition-colors font-medium">
                         <i class="fa-solid fa-wallet w-5"></i> Finanzas
                     </a>
-                    <a href="#" data-target="tab-clientes" class="nav-btn admin-only flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-primary hover:bg-accent rounded-lg transition-colors font-medium" onclick="renderClientes()">
-                        <i class="fa-solid fa-users w-5"></i> Clientes
-                    </a>
                     <a href="#" data-target="tab-hr" class="nav-btn flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-primary hover:bg-accent rounded-lg transition-colors font-medium">
                         <i class="fa-solid fa-user-clock w-5"></i> Tareas
                     </a>
@@ -533,39 +530,6 @@
                 </div>
 
                 <!-- 4.5 CLIENTES -->
-                <div id="tab-clientes" class="tab-content hidden-view animate-fade w-full">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
-                        <div>
-                            <h2 class="text-3xl font-black text-primary tracking-tight">Directorio de Clientes</h2>
-                            <p class="text-gray-500 text-sm mt-1">Historial de compras y recibos generados por cliente.</p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="relative w-full md:w-64">
-                                <i class="fa-solid fa-search absolute left-3 top-2.5 text-gray-400 text-sm"></i>
-                                <input type="text" id="srch-cliente" class="input-base pl-9 text-sm py-2" placeholder="Buscar por nombre o correo..." oninput="renderClientes()">
-                            </div>
-                            <button onclick="exportClientesCSV()" class="bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-green-700 transition flex items-center gap-2 text-sm"><i class="fa-solid fa-file-csv"></i> Exportar CSV</button>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-sm">
-                                <thead class="border-b border-gray-100">
-                                    <tr class="text-gray-400 font-bold uppercase text-xs">
-                                        <th class="pb-3 px-4">Cliente</th>
-                                        <th class="pb-3 px-4">Contacto</th>
-                                        <th class="pb-3 px-4">Tickets Acumulados</th>
-                                        <th class="pb-3 px-4 text-right">Total Comprado</th>
-                                        <th class="pb-3 px-4 text-center">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbl-clientes" class="divide-y divide-gray-50"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- 5. TAREAS -->
                 <div id="tab-hr" class="tab-content hidden-view animate-fade w-full">
                     <div class="flex justify-between items-center mb-6">
