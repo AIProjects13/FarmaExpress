@@ -2384,10 +2384,13 @@
             const de = document.getElementById('fin-date-end')?.value;
             const checkDate = makeDateFilter(ds, de);
 
+            console.log('[RENDER FINANZAS] Filtro fecha:', {desde: ds, hasta: de});
+
             renderCajaPanel();
 
             const ft = document.getElementById('tbl-facturas'); ft.innerHTML = '';
             const fFiltered = (DB.Ventas_Facturas || []).filter(x => checkDate(x.Fecha));
+            console.log('[FINANZAS] Recibos filtrados:', fFiltered.length, 'de', DB.Ventas_Facturas.length);
             fFiltered.sort((a,b) => {
                 let vA, vB;
                 if(sortFacturas.col === 'fecha') { vA = parseDateToInt(a.Fecha); vB = parseDateToInt(b.Fecha); }
@@ -2411,22 +2414,31 @@
 
             const gt = document.getElementById('tbl-gastos'); gt.innerHTML = '';
             const gFiltered = (DB.Gastos || []).filter(x => checkDate(x.Fecha));
-            gFiltered.sort((a,b) => {
-                let vA, vB;
-                if(sortGastos.col === 'fecha') { vA = parseDateToInt(a.Fecha); vB = parseDateToInt(b.Fecha); }
-                else if(sortGastos.col === 'concepto') { vA = (a.Concepto||'').toLowerCase(); vB = (b.Concepto||'').toLowerCase(); }
-                else if(sortGastos.col === 'tipo') { vA = a.Tipo; vB = b.Tipo; }
-                else if(sortGastos.col === 'monto') { vA = Number(a.Monto); vB = Number(b.Monto); }
-                else if(sortGastos.col === 'ref') {
-                    const matchA = (a.Concepto||'').match(/\[ID:\s*(.*?)\]/);
-                    const matchB = (b.Concepto||'').match(/\[ID:\s*(.*?)\]/);
-                    vA = matchA ? matchA[1] : ''; vB = matchB ? matchB[1] : '';
-                }
-                
-                if (vA < vB) return sortGastos.asc ? -1 : 1;
-                if (vA > vB) return sortGastos.asc ? 1 : -1;
-                return 0;
-            }).slice(0, 50).forEach(g => {
+            console.log('[FINANZAS] Gastos filtrados:', gFiltered.length, 'de', DB.Gastos.length);
+
+            // Ordenar y renderizar gastos
+            if (gFiltered.length > 0) {
+                gFiltered.sort((a,b) => {
+                    let vA, vB;
+                    const col = sortGastos?.col || 'fecha';
+                    if(col === 'fecha') { vA = parseDateToInt(a.Fecha); vB = parseDateToInt(b.Fecha); }
+                    else if(col === 'concepto') { vA = (a.Concepto||'').toLowerCase(); vB = (b.Concepto||'').toLowerCase(); }
+                    else if(col === 'tipo') { vA = a.Tipo; vB = b.Tipo; }
+                    else if(col === 'monto') { vA = Number(a.Monto); vB = Number(b.Monto); }
+                    else if(col === 'ref') {
+                        const matchA = (a.Concepto||'').match(/\[ID:\s*(.*?)\]/);
+                        const matchB = (b.Concepto||'').match(/\[ID:\s*(.*?)\]/);
+                        vA = matchA ? matchA[1] : ''; vB = matchB ? matchB[1] : '';
+                    }
+
+                    const asc = sortGastos?.asc !== false;
+                    if (vA < vB) return asc ? -1 : 1;
+                    if (vA > vB) return asc ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            gFiltered.slice(0, 50).forEach(g => {
                 const match = (g.Concepto||'').match(/\[ID:\s*(.*?)\]/);
                 const ref = match ? match[1] : '-';
                 const conceptoDisplay = (g.Concepto||'').replace(/\[ID:\s*.*?\]/, '').trim();
