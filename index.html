@@ -110,22 +110,24 @@
                     </a>
                 </nav>
 
-            <!-- Pie (fijo abajo) -->
-            <div class="px-4 flex-shrink-0 mt-4 border-t border-gray-700 pt-4">
-                <a href="#" data-target="tab-set" class="nav-btn admin-only flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-primary hover:bg-accent rounded-lg transition-colors font-medium mb-4">
-                    <i class="fa-solid fa-gear w-5"></i> Ajustes
+            <!-- Pie (fijo abajo, scrolleable si es necesario) -->
+            <div class="px-4 flex-shrink-0 mt-4 border-t border-gray-700 pt-3 overflow-y-auto max-h-[30vh]">
+                <a href="#" data-target="tab-set" class="nav-btn admin-only flex items-center gap-3 px-4 py-2 text-gray-300 hover:text-primary hover:bg-accent rounded-lg transition-colors font-medium mb-3">
+                    <i class="fa-solid fa-gear w-5"></i> <span class="text-sm">Ajustes</span>
                 </a>
-                <div class="bg-gray-800 p-4 rounded-lg">
-                    <div class="mb-3 border-b border-gray-700 pb-2">
-                        <p class="text-[10px] text-gray-400 uppercase">Cuenta Conectada:</p>
+                <div class="bg-gray-800 p-3 rounded-lg space-y-2">
+                    <div class="border-b border-gray-700 pb-2">
+                        <p class="text-[9px] text-gray-400 uppercase">Cuenta:</p>
                         <p class="text-xs text-gray-300 truncate" id="user-display">...</p>
                     </div>
-                    <p class="text-[10px] text-gray-400 uppercase mb-1">Turno Activo:</p>
-                    <p class="text-sm text-accent font-bold mb-3 cursor-pointer hover:underline truncate" id="active-user-display" onclick="openModal('mod-pin')">Ninguno (Seleccionar)</p>
-                    <div class="flex gap-2 mb-3">
-                        <button onclick="pauseActiveUser()" class="flex-1 text-[10px] bg-gray-700 hover:bg-gray-600 py-1.5 rounded border border-gray-600 transition">Pausar</button>
+                    <div>
+                        <p class="text-[9px] text-gray-400 uppercase mb-1">Turno:</p>
+                        <p class="text-xs text-accent font-bold cursor-pointer hover:underline truncate" id="active-user-display" onclick="openModal('mod-pin')">Ninguno (Sel.)</p>
                     </div>
-                    <button onclick="handleLogout()" class="w-full text-xs bg-red-500/20 text-red-400 hover:bg-red-500/40 py-1.5 rounded font-bold transition">Salir del Sistema</button>
+                    <div class="flex gap-2">
+                        <button onclick="pauseActiveUser()" class="flex-1 text-[9px] bg-gray-700 hover:bg-gray-600 py-1 rounded border border-gray-600 transition">Pausar</button>
+                    </div>
+                    <button onclick="handleLogout()" class="w-full text-xs bg-red-500/20 text-red-400 hover:bg-red-500/40 py-1.5 rounded font-bold transition">Salir</button>
                 </div>
             </div>
         </aside>
