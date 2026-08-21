@@ -75,19 +75,19 @@
         <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden" onclick="toggleSidebar()"></div>
         
         <!-- SIDEBAR -->
-        <aside id="sidebar" class="absolute md:relative w-64 bg-primary text-white flex flex-col py-6 shadow-xl z-50 h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300">
-            <!-- Logo (fijo arriba) -->
-            <div class="px-6 mb-8 flex-shrink-0">
-                <div class="flex flex-col items-center gap-3">
-                    <div class="w-[106px] h-[106px] bg-white rounded-full flex items-center justify-center p-1 shadow-md flex-shrink-0">
+        <aside id="sidebar" class="absolute md:relative w-64 bg-primary text-white flex flex-col py-6 shadow-xl z-50 h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300 overflow-y-auto md:overflow-y-visible">
+            <!-- Logo -->
+            <div class="px-6 mb-6 flex-shrink-0">
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-[90px] h-[90px] md:w-[106px] md:h-[106px] bg-white rounded-full flex items-center justify-center p-1 shadow-md flex-shrink-0">
                         <img src="https://i.imgur.com/IoYI6XZ.png" alt="Logo" class="w-full h-full object-contain scale-[77%]">
                     </div>
-                    <span class="font-extrabold text-xl tracking-tight text-center" id="sidebar-store-name">Farmacia</span>
+                    <span class="font-extrabold text-lg md:text-xl tracking-tight text-center" id="sidebar-store-name">Farmacia</span>
                 </div>
             </div>
 
-            <!-- Navegación (scrolleable) -->
-            <nav class="flex-1 overflow-y-auto space-y-2 px-4" id="main-nav">
+            <!-- Navegación -->
+            <nav class="space-y-2 px-4 mb-4" id="main-nav">
                     <a href="#" data-target="tab-dash" class="nav-btn admin-only flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-primary hover:bg-accent rounded-lg transition-colors font-medium bg-accent text-primary">
                         <i class="fa-solid fa-chart-line w-5"></i> Dashboard
                     </a>
@@ -110,30 +110,26 @@
                     </a>
                 </nav>
 
-            <!-- Pie (fijo abajo, scrolleable si es necesario) -->
-            <div class="px-4 flex-shrink-0 mt-4 border-t border-gray-700 pt-3 overflow-y-auto max-h-[30vh]">
-                <a href="#" data-target="tab-set" class="nav-btn admin-only flex items-center gap-3 px-4 py-2 text-gray-300 hover:text-primary hover:bg-accent rounded-lg transition-colors font-medium mb-3">
+            <!-- Pie -->
+            <div class="px-4 mt-2 border-t border-gray-700 pt-3">
+                <a href="#" data-target="tab-set" class="nav-btn admin-only flex items-center gap-3 px-4 py-2 text-gray-300 hover:text-primary hover:bg-accent rounded-lg transition-colors font-medium mb-2">
                     <i class="fa-solid fa-gear w-5"></i> <span class="text-sm">Ajustes</span>
                 </a>
-                <div class="bg-gray-800 p-3 rounded-lg space-y-2">
-                    <div class="border-b border-gray-700 pb-2">
+                <div class="bg-gray-800 p-3 rounded-lg space-y-1.5 text-xs">
+                    <div class="border-b border-gray-700 pb-1">
                         <p class="text-[9px] text-gray-400 uppercase">Cuenta:</p>
-                        <p class="text-xs text-gray-300 truncate" id="user-display">...</p>
+                        <p class="text-gray-300 truncate" id="user-display">...</p>
                     </div>
-                    <div>
-                        <p class="text-[9px] text-gray-400 uppercase mb-1">Turno:</p>
-                        <p class="text-xs text-accent font-bold cursor-pointer hover:underline truncate" id="active-user-display" onclick="openModal('mod-pin')">Ninguno (Sel.)</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="pauseActiveUser()" class="flex-1 text-[9px] bg-gray-700 hover:bg-gray-600 py-1 rounded border border-gray-600 transition">Pausar</button>
-                    </div>
-                    <button onclick="handleLogout()" class="w-full text-xs bg-red-500/20 text-red-400 hover:bg-red-500/40 py-1.5 rounded font-bold transition">Salir</button>
+                    <p class="text-[9px] text-gray-400 uppercase">Turno:</p>
+                    <p class="text-accent font-bold cursor-pointer hover:underline truncate mb-1.5" id="active-user-display" onclick="openModal('mod-pin')">Ninguno (Sel.)</p>
+                    <button onclick="pauseActiveUser()" class="w-full text-[9px] bg-gray-700 hover:bg-gray-600 py-1 rounded border border-gray-600 transition mb-1.5">Pausar</button>
+                    <button onclick="handleLogout()" class="w-full bg-red-500/20 text-red-400 hover:bg-red-500/40 py-1.5 rounded font-bold transition">Salir del Sistema</button>
                 </div>
             </div>
         </aside>
 
         <!-- CONTENT -->
-        <main class="flex-1 flex flex-col h-screen overflow-hidden bg-light relative pb-[72px] md:pb-0">
+        <main class="flex-1 flex flex-col h-screen overflow-hidden bg-light relative">
             
             <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-8 z-10 flex-shrink-0">
                 <div class="flex items-center gap-3">
@@ -1132,12 +1128,6 @@
                 <button id="btn-anular-recibo" onclick="anularFactura(document.getElementById('rec-fact-id').innerText)" class="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg py-3 flex items-center justify-center gap-2 admin-only"><i class="fa-solid fa-ban"></i>Anular</button>
             </div>
         </div>
-    </div>
-
-    <!-- MOBILE FOOTER - Acceso rápido en móvil -->
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 px-4 py-3 flex gap-2">
-        <button onclick="openModal('mod-pin')" class="flex-1 btn-accent text-sm py-2 flex items-center justify-center gap-2"><i class="fa-solid fa-user-clock"></i> <span class="hidden sm:inline">Turno</span></button>
-        <button onclick="handleLogout()" class="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm py-2 transition font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-door-open"></i> <span class="hidden sm:inline">Salir</span></button>
     </div>
 
     <!-- Modal Paquete -->
