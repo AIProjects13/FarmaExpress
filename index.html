@@ -383,9 +383,9 @@
                         <div class="flex flex-wrap items-center gap-3">
                             <div class="flex flex-col gap-1">
                                 <div class="flex items-center gap-2">
-                                    <input type="date" id="fin-date-start" onchange="renderFinanzas(); console.log('FILTRO CAMBIÓ - FIN-DATE-START');" oninput="renderFinanzas(); console.log('FILTRO CAMBIÓ - FIN-DATE-START');" class="input-base w-auto text-sm" placeholder="Inicio">
+                                    <input type="date" id="fin-date-start" onchange="renderFinanzas()" oninput="renderFinanzas()" class="input-base w-auto text-sm" placeholder="Inicio">
                                     <span class="text-gray-400 font-bold">-</span>
-                                    <input type="date" id="fin-date-end" onchange="renderFinanzas(); console.log('FILTRO CAMBIÓ - FIN-DATE-END');" oninput="renderFinanzas(); console.log('FILTRO CAMBIÓ - FIN-DATE-END');" class="input-base w-auto text-sm" placeholder="Fin">
+                                    <input type="date" id="fin-date-end" onchange="renderFinanzas()" oninput="renderFinanzas()" class="input-base w-auto text-sm" placeholder="Fin">
                                     <button onclick="document.getElementById('fin-date-start').value=''; document.getElementById('fin-date-end').value=''; renderFinanzas();" class="text-gray-400 hover:text-red-500 transition px-2" title="Limpiar Filtros"><i class="fa-solid fa-eraser"></i></button>
                                 </div>
                                 <span class="text-[10px] text-gray-400 italic"><i class="fa-solid fa-circle-info mr-1"></i>Mostrando los movimientos más recientes. Para consultar el historial completo o fechas anteriores, utiliza el botón "Cargar Todo".</span>

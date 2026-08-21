@@ -1940,13 +1940,13 @@
         };
 
         window.renderPosCatalog = function renderPosCatalog() {
-            const q = (document.getElementById('pos-search').value || '');
+            const q = (document.getElementById('pos-search').value || '').toLowerCase();
             const c = document.getElementById('pos-catalog');
             let html = '';
-            
+
             // Búsqueda Directa
             if (q.trim() !== '') {
-                activePosCategory = null; 
+                activePosCategory = null;
                 updatePosMidHeader();
                 renderPosCategories();
 
@@ -1954,7 +1954,7 @@
                     html += posProductoCardHTML(p);
                 });
 
-                (DB.Paquetes || []).filter(p => (p.Nombre_Paquete || '').toLowerCase().includes(q.toLowerCase()) && p.Estado==='Activo')
+                (DB.Paquetes || []).filter(p => (p.Nombre_Paquete || '').toLowerCase().includes(q) && p.Estado==='Activo')
                     .forEach(p => { html += posPaqueteCardHTML(p); });
                 c.innerHTML = html;
                 return;
@@ -2384,13 +2384,10 @@
             const de = document.getElementById('fin-date-end')?.value;
             const checkDate = makeDateFilter(ds, de);
 
-            console.log('[RENDER FINANZAS] Filtro fecha:', {desde: ds, hasta: de});
-
             renderCajaPanel();
 
             const ft = document.getElementById('tbl-facturas'); ft.innerHTML = '';
             const fFiltered = (DB.Ventas_Facturas || []).filter(x => checkDate(x.Fecha));
-            console.log('[FINANZAS] Recibos filtrados:', fFiltered.length, 'de', DB.Ventas_Facturas.length);
             fFiltered.sort((a,b) => {
                 let vA, vB;
                 if(sortFacturas.col === 'fecha') { vA = parseDateToInt(a.Fecha); vB = parseDateToInt(b.Fecha); }
@@ -2414,7 +2411,6 @@
 
             const gt = document.getElementById('tbl-gastos'); gt.innerHTML = '';
             const gFiltered = (DB.Gastos || []).filter(x => checkDate(x.Fecha));
-            console.log('[FINANZAS] Gastos filtrados:', gFiltered.length, 'de', DB.Gastos.length);
 
             // Ordenar y renderizar gastos
             if (gFiltered.length > 0) {
@@ -2899,37 +2895,22 @@
         window.saveCajaBase = async () => {
             console.log('[BASE] 1. boton presionado');
 
-            if(!checkUserActive()) { console.warn('[BASE] CORTADO: no hay turno activo (checkUserActive dio false)'); return; }
-            console.log('[BASE] 2. turno ok, rol =', userRole);
+            if(!checkUserActive()) return;
 
             const monto = Number(document.getElementById('caja-base-monto').value || 0);
             const fecha = document.getElementById('caja-base-fecha').value;
-            console.log('[BASE] 3. monto =', monto, '| fecha del formulario =', fecha);
 
-            if (!fecha) { console.warn('[BASE] CORTADO: no se eligió fecha'); return showToast("Elegí desde qué fecha arranca el conteo", "error"); }
+            if (!fecha) return showToast("Elegí desde qué fecha arranca el conteo", "error");
 
-            // Si la fecha elegida es HOY, se guarda con la hora exacta de este momento.
-            // Si solo se guardara el dia, el conteo arrancaria a medianoche y volveria
-            // a tragarse todo lo que se registro hoy mas temprano (por ejemplo la carga
-            // de inventario). Para fechas pasadas se cuenta el dia completo.
             const fechaGuardar = (fecha === sysTime(true)) ? sysTime() : (fecha + ' 00:00:00');
-            console.log('[BASE] 4. hoy es', sysTime(true), '| se va a guardar la fecha', fechaGuardar);
 
-            // Primero se refleja en pantalla para que se vea el efecto de una vez...
             setConfigLocal(CFG_CAJA_BASE, monto);
             setConfigLocal(CFG_CAJA_FECHA, fechaGuardar);
-            console.log('[BASE] 5. guardado en la copia local. Configuracion ahora:', JSON.parse(JSON.stringify(DB.Configuracion || [])));
-            console.log('[BASE] 6. estado calculado del panel:', calcularEstadoCaja(DB, getCajaOpts()));
             renderCajaPanel();
             closeModal('mod-caja-base');
 
-            // ...y hasta despues se avisa lo que DE VERDAD paso con la nube.
-            // Antes se decia "guardada" antes de saberlo, y por eso parecia
-            // que el boton no hacia nada.
             try {
-                console.log('[BASE] 7. enviando a la hoja...');
                 const r = await apiCall('updateConfig', { configData: { [CFG_CAJA_BASE]: monto, [CFG_CAJA_FECHA]: fechaGuardar } });
-                console.log('[BASE] 8. respuesta de la hoja:', r);
                 if (r === null) {
                     showToast('Base aplicada en pantalla, pero quedó PENDIENTE de subir a la hoja.', 'error');
                 } else if (r.status === 'success') {
