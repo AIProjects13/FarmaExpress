@@ -734,7 +734,7 @@
 
             // Primero intentar verificar con el backend (seguro)
             try {
-                const verifyResult = await apiCall('verifyPin', { userID: uid, pin: pin });
+                const verifyResult = await apiCall('verifyPin', { ID_Usuario: uid, pin: pin });
                 if (verifyResult && verifyResult.status === 'success') {
                     // PIN verificado en backend
                     const u = DB.Usuarios.find(x => x.ID_Usuario === uid);
@@ -781,97 +781,49 @@
         const saveUsuarioInline = window.saveUsuarioInline = async (event) => {
             event.preventDefault();
             const nombre = document.getElementById('usr-nombre-inline').value.trim();
-            const email = document.getElementById('usr-email-inline').value.trim();
             const pin = document.getElementById('usr-pin-inline').value.trim();
-            if(!nombre || !email || pin.length < 4) return showToast("Llene nombre, email y PIN de 4 dígitos", "error");
+            if(!nombre || pin.length < 4) return showToast("Llene el nombre y un PIN de 4 dígitos", "error");
 
             const id = generarIdUnico('USR-');
             const data = {
                 ID_Usuario: id,
                 Nombre: nombre,
-                Email: email,
                 Apellido: '',
-                Fecha_Nacimiento: '',
                 PIN: pin,
                 Estado_Turno: 'Pausado',
                 Creado_En: sysTime()
             };
 
             setLoading(true);
-            try {
-                // Crear en Firebase
-                await createUserWithEmailAndPassword(auth, email.toLowerCase(), pin);
-                // Crear rol en Firestore
-                await setDoc(doc(db, "farmacia_roles", email.toLowerCase()), { role: 'user', createdAt: new Date() });
+            const res = await apiCall('crud', { sheetName: 'Usuarios', operation: 'create', rowData: data, idField: 'ID_Usuario', idValue: id });
+            logAudit('Usuarios', 'Crear/Editar Usuario', `Usuario: ${data.Nombre} [${id}]`);
+            setLoading(false);
 
-                // Guardar en Google Sheet
-                const res = await apiCall('crud', { sheetName: 'Usuarios', operation: 'create', rowData: data, idField: 'ID_Usuario', idValue: id });
-                logAudit('Usuarios', 'Crear Usuario', `${nombre} [${id}] (${email})`);
-                setLoading(false);
-
-                if(res) {
-                    DB.Usuarios.push(data);
-                    renderUsuarios();
-                    document.getElementById('usr-nombre-inline').value = '';
-                    document.getElementById('usr-email-inline').value = '';
-                    document.getElementById('usr-pin-inline').value = '';
-                    showToast("Usuario Creado: " + email);
-                }
-            } catch(err) {
-                setLoading(false);
-                if(err.code === 'auth/email-already-in-use') {
-                    return showToast("Este email ya está registrado", "error");
-                }
-                showToast("Error: " + err.message, "error");
-            }
-        };
+            if(res) {
+                DB.Usuarios.push(data);
+                renderUsuarios();
+                document.getElementById('usr-nombre-inline').value = '';
+                document.getElementById('usr-pin-inline').value = '';
+                showToast("Usuario Creado Exitosamente");
 
         window.saveUsuario = async () => {
             const id = document.getElementById('usr-id').value || generarIdUnico('USR-');
-            const email = document.getElementById('usr-email').value;
-            const pin = document.getElementById('usr-pin').value;
-            const isNewUser = !document.getElementById('usr-id').value;
-
             const data = {
                 ID_Usuario: id, Nombre: document.getElementById('usr-nombre').value,
                 Apellido: document.getElementById('usr-apellido').value, Fecha_Nacimiento: document.getElementById('usr-dob')?.value || '',
-                PIN: pin, Email: email, Estado_Turno: 'Pausado', Creado_En: sysTime()
+                PIN: document.getElementById('usr-pin').value, Estado_Turno: 'Pausado', Creado_En: sysTime()
             };
-
-            if(!data.Nombre || !data.Apellido || !email || pin.length < 4)
-                return showToast("Llene todos los datos (Email, Nombres, Apellidos, PIN 4 dígitos)", "error");
+            if(!data.Nombre || !data.Apellido || data.PIN.length < 4) return showToast("Llene los datos y un PIN 4 dígitos válido", "error");
 
             setLoading(true);
-            try {
-                // Si es nuevo usuario, crear en Firebase
-                if(isNewUser) {
-                    try {
-                        await createUserWithEmailAndPassword(auth, email.toLowerCase(), pin);
-                        // Crear rol en Firestore
-                        await setDoc(doc(db, "farmacia_roles", email.toLowerCase()), { role: 'user', createdAt: new Date() });
-                    } catch(fbErr) {
-                        setLoading(false);
-                        if(fbErr.code === 'auth/email-already-in-use') {
-                            return showToast("Este email ya está registrado en Firebase", "error");
-                        }
-                        return showToast("Error al crear en Firebase: " + fbErr.message, "error");
-                    }
-                }
+            const res = await apiCall('crud', { sheetName: 'Usuarios', operation: document.getElementById('usr-id').value?'update':'create', rowData: data, idField: 'ID_Usuario', idValue: id });
+            logAudit('Usuarios', 'Crear/Editar Usuario', `Usuario: ${data.Nombre} [${id}]`);
+            setLoading(false);
 
-                // Guardar en Google Sheet
-                const res = await apiCall('crud', { sheetName: 'Usuarios', operation: isNewUser?'create':'update', rowData: data, idField: 'ID_Usuario', idValue: id });
-                logAudit('Usuarios', 'Crear/Editar Usuario', `Usuario: ${data.Nombre} [${id}] (${email})`);
-                setLoading(false);
-
-                if(res) {
-                    const idx = DB.Usuarios.findIndex(x => x.ID_Usuario === id);
-                    if (idx > -1) DB.Usuarios[idx] = data; else DB.Usuarios.push(data);
-                    renderUsuarios(); applyConfig(); closeModal('mod-usuario');
-                    showToast(isNewUser ? "Usuario creado correctamente. Email: " + email : "Usuario actualizado");
-                }
-            } catch(err) {
-                setLoading(false);
-                showToast("Error: " + err.message, "error");
+            if(res) {
+                const idx = DB.Usuarios.findIndex(x => x.ID_Usuario === id);
+                if (idx > -1) DB.Usuarios[idx] = data; else DB.Usuarios.push(data);
+                renderUsuarios(); applyConfig(); closeModal('mod-usuario'); showToast("Usuario Guardado");
             }
         };
 
