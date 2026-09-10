@@ -569,13 +569,12 @@
                             </div>
                         </div>
 
-                        <div class="bg-white p-6 rounded-xl border border-gray-200 min-h-[350px]">
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 min-h-[350px] admin-only">
                             <h3 class="font-bold text-primary text-xl mb-4 border-b border-gray-200 pb-2"><i class="fa-solid fa-users-gear mr-2 text-gray-400"></i> Gestión de Usuarios</h3>
                             <form id="frm-user" onsubmit="saveUsuarioInline(event)" class="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre</label><input type="text" id="usr-nombre-inline" class="input-base text-sm" required></div>
-                                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email (Login)</label><input type="email" id="usr-email-inline" class="input-base text-sm" required></div>
-                                    <div class="col-span-2"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">PIN (4 dígitos)</label><input type="password" id="usr-pin-inline" class="input-base text-sm" maxlength="4" required></div>
+                                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">PIN (4 dígitos)</label><input type="password" id="usr-pin-inline" class="input-base text-sm" maxlength="4" required></div>
                                 </div>
                                 <button type="submit" class="w-full btn-accent text-sm"><i class="fa-solid fa-user-plus"></i> Guardar Usuario</button>
                             </form>
@@ -807,13 +806,12 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombres *</label><input type="text" id="usr-nombre" class="input-base" required></div>
                     <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Apellidos *</label><input type="text" id="usr-apellido" class="input-base" required></div>
-                    <div class="col-span-2"><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email (Login) *</label><input type="email" id="usr-email" class="input-base" required></div>
                     <div class="col-span-2">
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">PIN 4 Dígitos *</label>
                         <input type="password" id="usr-pin" class="input-base tracking-widest text-center text-lg" maxlength="4" placeholder="****" required>
                     </div>
                 </div>
-                <p class="text-xs text-gray-400">El email es necesario para hacer login. El PIN sirve para activar turno.</p>
+                <p class="text-xs text-gray-400">El PIN sirve para activar turno en la app.</p>
             </div>
             <div class="p-5 border-t border-gray-200 flex gap-2">
                 <button type="button" onclick="closeModal('mod-usuario')" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-bold hover:bg-gray-300">Cancelar</button>

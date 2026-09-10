@@ -834,7 +834,6 @@
             document.getElementById('usr-id').value = '';
             document.getElementById('usr-nombre').value = '';
             document.getElementById('usr-apellido').value = '';
-            document.getElementById('usr-email').value = '';
             document.getElementById('usr-pin').value = '';
             if(document.getElementById('usr-dob')) document.getElementById('usr-dob').value = '';
             document.getElementById('mod-usr-title').innerText = "Nuevo Usuario";
@@ -847,7 +846,6 @@
             document.getElementById('usr-id').value = id;
             document.getElementById('usr-nombre').value = u.Nombre;
             document.getElementById('usr-apellido').value = u.Apellido;
-            document.getElementById('usr-email').value = u.Email || '';
             const dobEl = document.getElementById('usr-dob'); if (dobEl) dobEl.value = u.Fecha_Nacimiento || '';
             document.getElementById('usr-pin').value = u.PIN;
             document.getElementById('mod-usr-title').innerText = "Editar Usuario";
