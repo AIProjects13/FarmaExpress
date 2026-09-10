@@ -795,16 +795,24 @@
             };
 
             setLoading(true);
-            const res = await apiCall('crud', { sheetName: 'Usuarios', operation: 'create', rowData: data, idField: 'ID_Usuario', idValue: id });
-            logAudit('Usuarios', 'Crear/Editar Usuario', `Usuario: ${data.Nombre} [${id}]`);
-            setLoading(false);
+            try {
+                const res = await apiCall('crud', { sheetName: 'Usuarios', operation: 'create', rowData: data, idField: 'ID_Usuario', idValue: id });
+                logAudit('Usuarios', 'Crear/Editar Usuario', `Usuario: ${data.Nombre} [${id}]`);
+                setLoading(false);
 
-            if(res) {
-                DB.Usuarios.push(data);
-                renderUsuarios();
-                document.getElementById('usr-nombre-inline').value = '';
-                document.getElementById('usr-pin-inline').value = '';
-                showToast("Usuario Creado Exitosamente");
+                if(res) {
+                    DB.Usuarios.push(data);
+                    renderUsuarios();
+                    document.getElementById('usr-nombre-inline').value = '';
+                    document.getElementById('usr-pin-inline').value = '';
+                    showToast("Usuario Creado Exitosamente");
+                } else {
+                    showToast("Error al crear usuario", "error");
+                }
+            } catch(err) {
+                setLoading(false);
+                console.error('Error en saveUsuarioInline:', err);
+                showToast("Error: " + err.message, "error");
             }
         };
 
@@ -818,14 +826,22 @@
             if(!data.Nombre || !data.Apellido || data.PIN.length < 4) return showToast("Llene los datos y un PIN 4 dígitos válido", "error");
 
             setLoading(true);
-            const res = await apiCall('crud', { sheetName: 'Usuarios', operation: document.getElementById('usr-id').value?'update':'create', rowData: data, idField: 'ID_Usuario', idValue: id });
-            logAudit('Usuarios', 'Crear/Editar Usuario', `Usuario: ${data.Nombre} [${id}]`);
-            setLoading(false);
+            try {
+                const res = await apiCall('crud', { sheetName: 'Usuarios', operation: document.getElementById('usr-id').value?'update':'create', rowData: data, idField: 'ID_Usuario', idValue: id });
+                logAudit('Usuarios', 'Crear/Editar Usuario', `Usuario: ${data.Nombre} [${id}]`);
+                setLoading(false);
 
-            if(res) {
-                const idx = DB.Usuarios.findIndex(x => x.ID_Usuario === id);
-                if (idx > -1) DB.Usuarios[idx] = data; else DB.Usuarios.push(data);
-                renderUsuarios(); applyConfig(); closeModal('mod-usuario'); showToast("Usuario Guardado");
+                if(res) {
+                    const idx = DB.Usuarios.findIndex(x => x.ID_Usuario === id);
+                    if (idx > -1) DB.Usuarios[idx] = data; else DB.Usuarios.push(data);
+                    renderUsuarios(); applyConfig(); closeModal('mod-usuario'); showToast("Usuario Guardado");
+                } else {
+                    showToast("Error al guardar usuario", "error");
+                }
+            } catch(err) {
+                setLoading(false);
+                console.error('Error en saveUsuario:', err);
+                showToast("Error: " + err.message, "error");
             }
         };
 
