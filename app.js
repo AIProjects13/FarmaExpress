@@ -781,16 +781,16 @@
         const saveUsuarioInline = window.saveUsuarioInline = async (event) => {
             event.preventDefault();
             const nombre = document.getElementById('usr-nombre-inline').value.trim();
+            const email = document.getElementById('usr-email-inline').value.trim();
             const pin = document.getElementById('usr-pin-inline').value.trim();
-            if(!nombre || pin.length < 4) return showToast("Llene el nombre y un PIN de 4 dígitos", "error");
+            if(!nombre || !email || pin.length < 4) return showToast("Llene nombre, email y PIN de 4 dígitos", "error");
 
-            // HALLAZGO 9: Usar generador de ID único
             const id = generarIdUnico('USR-');
             const data = {
                 ID_Usuario: id,
                 Nombre: nombre,
+                Email: email,
                 Apellido: '',
-                Rol: 'user',
                 Fecha_Nacimiento: '',
                 PIN: pin,
                 Estado_Turno: 'Pausado',
@@ -798,39 +798,93 @@
             };
 
             setLoading(true);
-            const res = await apiCall('crud', { sheetName: 'Usuarios', operation: 'create', rowData: data, idField: 'ID_Usuario', idValue: id });
-            logAudit('Usuarios', 'Crear/Editar Usuario', `Usuario: ${data.Nombre} [${id}]`);
-            setLoading(false);
-            
-            if(res) {
-                DB.Usuarios.push(data);
-                renderUsuarios();
-                document.getElementById('usr-nombre-inline').value = '';
-                document.getElementById('usr-pin-inline').value = '';
-                showToast("Usuario Creado Exitosamente");
+            try {
+                // Crear en Firebase
+                await createUserWithEmailAndPassword(auth, email.toLowerCase(), pin);
+                // Crear rol en Firestore
+                await setDoc(doc(db, "farmacia_roles", email.toLowerCase()), { role: 'user', createdAt: new Date() });
+
+                // Guardar en Google Sheet
+                const res = await apiCall('crud', { sheetName: 'Usuarios', operation: 'create', rowData: data, idField: 'ID_Usuario', idValue: id });
+                logAudit('Usuarios', 'Crear Usuario', `${nombre} [${id}] (${email})`);
+                setLoading(false);
+
+                if(res) {
+                    DB.Usuarios.push(data);
+                    renderUsuarios();
+                    document.getElementById('usr-nombre-inline').value = '';
+                    document.getElementById('usr-email-inline').value = '';
+                    document.getElementById('usr-pin-inline').value = '';
+                    showToast("Usuario Creado: " + email);
+                }
+            } catch(err) {
+                setLoading(false);
+                if(err.code === 'auth/email-already-in-use') {
+                    return showToast("Este email ya está registrado", "error");
+                }
+                showToast("Error: " + err.message, "error");
             }
         };
 
         window.saveUsuario = async () => {
-            // HALLAZGO 9: Usar generador de ID único
             const id = document.getElementById('usr-id').value || generarIdUnico('USR-');
+            const email = document.getElementById('usr-email').value;
+            const pin = document.getElementById('usr-pin').value;
+            const isNewUser = !document.getElementById('usr-id').value;
+
             const data = {
                 ID_Usuario: id, Nombre: document.getElementById('usr-nombre').value,
                 Apellido: document.getElementById('usr-apellido').value, Fecha_Nacimiento: document.getElementById('usr-dob')?.value || '',
-                PIN: document.getElementById('usr-pin').value, Estado_Turno: 'Pausado', Creado_En: sysTime()
+                PIN: pin, Email: email, Estado_Turno: 'Pausado', Creado_En: sysTime()
             };
-            if(!data.Nombre || !data.Apellido || data.PIN.length < 4) return showToast("Llene los datos y un PIN 4 dígitos válido", "error");
+
+            if(!data.Nombre || !data.Apellido || !email || pin.length < 4)
+                return showToast("Llene todos los datos (Email, Nombres, Apellidos, PIN 4 dígitos)", "error");
 
             setLoading(true);
-            const res = await apiCall('crud', { sheetName: 'Usuarios', operation: document.getElementById('usr-id').value?'update':'create', rowData: data, idField: 'ID_Usuario', idValue: id });
-            logAudit('Usuarios', 'Crear/Editar Usuario', `Usuario: ${data.Nombre} [${id}]`);
-            setLoading(false);
-            
-            if(res) {
-                const idx = DB.Usuarios.findIndex(x => x.ID_Usuario === id);
-                if (idx > -1) DB.Usuarios[idx] = data; else DB.Usuarios.push(data);
-                renderUsuarios(); applyConfig(); closeModal('mod-usuario'); showToast("Usuario Guardado");
+            try {
+                // Si es nuevo usuario, crear en Firebase
+                if(isNewUser) {
+                    try {
+                        await createUserWithEmailAndPassword(auth, email.toLowerCase(), pin);
+                        // Crear rol en Firestore
+                        await setDoc(doc(db, "farmacia_roles", email.toLowerCase()), { role: 'user', createdAt: new Date() });
+                    } catch(fbErr) {
+                        setLoading(false);
+                        if(fbErr.code === 'auth/email-already-in-use') {
+                            return showToast("Este email ya está registrado en Firebase", "error");
+                        }
+                        return showToast("Error al crear en Firebase: " + fbErr.message, "error");
+                    }
+                }
+
+                // Guardar en Google Sheet
+                const res = await apiCall('crud', { sheetName: 'Usuarios', operation: isNewUser?'create':'update', rowData: data, idField: 'ID_Usuario', idValue: id });
+                logAudit('Usuarios', 'Crear/Editar Usuario', `Usuario: ${data.Nombre} [${id}] (${email})`);
+                setLoading(false);
+
+                if(res) {
+                    const idx = DB.Usuarios.findIndex(x => x.ID_Usuario === id);
+                    if (idx > -1) DB.Usuarios[idx] = data; else DB.Usuarios.push(data);
+                    renderUsuarios(); applyConfig(); closeModal('mod-usuario');
+                    showToast(isNewUser ? "Usuario creado correctamente. Email: " + email : "Usuario actualizado");
+                }
+            } catch(err) {
+                setLoading(false);
+                showToast("Error: " + err.message, "error");
             }
+        };
+
+        const newUsuario = window.newUsuario = () => {
+            if(!checkUserActive()) return;
+            document.getElementById('usr-id').value = '';
+            document.getElementById('usr-nombre').value = '';
+            document.getElementById('usr-apellido').value = '';
+            document.getElementById('usr-email').value = '';
+            document.getElementById('usr-pin').value = '';
+            if(document.getElementById('usr-dob')) document.getElementById('usr-dob').value = '';
+            document.getElementById('mod-usr-title').innerText = "Nuevo Usuario";
+            openModal('mod-usuario');
         };
 
         const editUsuario = window.editUsuario = (id) => {
@@ -839,6 +893,7 @@
             document.getElementById('usr-id').value = id;
             document.getElementById('usr-nombre').value = u.Nombre;
             document.getElementById('usr-apellido').value = u.Apellido;
+            document.getElementById('usr-email').value = u.Email || '';
             const dobEl = document.getElementById('usr-dob'); if (dobEl) dobEl.value = u.Fecha_Nacimiento || '';
             document.getElementById('usr-pin').value = u.PIN;
             document.getElementById('mod-usr-title').innerText = "Editar Usuario";
