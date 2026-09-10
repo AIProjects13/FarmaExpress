@@ -805,6 +805,8 @@
                 document.getElementById('usr-nombre-inline').value = '';
                 document.getElementById('usr-pin-inline').value = '';
                 showToast("Usuario Creado Exitosamente");
+            }
+        };
 
         window.saveUsuario = async () => {
             const id = document.getElementById('usr-id').value || generarIdUnico('USR-');
