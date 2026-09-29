@@ -209,7 +209,11 @@
         };
 
         // Un recibo anulado no es venta: no suma a caja, ni a ventas, ni a ganancia.
-        const ventaEsAnulada = (f) => String((f && f.Estatus) || '').trim().toLowerCase() === 'cancelado';
+        // 'Anulada' lo escribia una version anterior del backend: se trata igual que 'Cancelado'.
+        const ventaEsAnulada = (f) => {
+            const e = String((f && f.Estatus) || '').trim().toLowerCase();
+            return e === 'cancelado' || e === 'anulada';
+        };
 
         // Solo el efectivo entra a la caja. Tarjeta y transferencia van al banco.
         const ventaEsEfectivo = (f) => {
@@ -480,11 +484,16 @@
             for (let i = 0; i < q.length; i++) {
                 const item = q[i];
                 try {
+                    // El token guardado en la cola vence en una hora: se reemplaza por uno vigente.
+                    if (auth.currentUser) item.token = await auth.currentUser.getIdToken((item._intentos || 0) > 0);
                     const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(item) });
                     if (!res.ok) throw new Error("Error HTTP " + res.status);
                     const data = await res.json();
                     if(data.status === 'error') {
+                        if (String(data.message || '').includes('ACCESO DENEGADO')) throw new Error(data.message);
+                        // Rechazo definitivo (ej. stock insuficiente): reintentarlo no sirve.
                         console.error("Error lógico en backend para request:", item, data.message);
+                        descartados++;
                     }
                 } catch(e) {
                     item._intentos = (item._intentos || 0) + 1;
@@ -1353,12 +1362,27 @@
                 productoActualizado: p
             };
 
-            await apiCall('crud', { sheetName: 'Inventario_Compras', operation: 'create', rowData: rstData, idField: 'ID_Compra', idValue: rstData.ID_Compra });
-            apiCall('crud', { sheetName: 'Gastos', operation: 'create', rowData: gastoCompra, idField: 'ID_Gasto', idValue: gastoCompra.ID_Gasto });
-            // Enviar a backend para procesamiento adicional (validaciones, auditoría)
-            apiCall('processRestock', restockPayload);
+            // Una sola operacion: el backend suma el stock sobre el valor actual de la
+            // hoja y registra compra y gasto juntos. null = quedo en la cola sin conexion.
+            let r;
+            try {
+                r = await apiCall('processRestock', restockPayload);
+            } catch(e) {
+                // apiCall ya mostro el error. Se recarga para descartar el cambio local.
+                setLoading(false);
+                closeModal('mod-abastecer');
+                syncData(true);
+                return;
+            }
+
+            // Backend sin actualizar: responde success sin guardar nada, asi que se
+            // usa el camino anterior para no perder el abastecimiento.
+            if (r && !r.restockOk) {
+                await apiCall('crud', { sheetName: 'Inventario_Compras', operation: 'create', rowData: rstData, idField: 'ID_Compra', idValue: rstData.ID_Compra });
+                apiCall('crud', { sheetName: 'Gastos', operation: 'create', rowData: gastoCompra, idField: 'ID_Gasto', idValue: gastoCompra.ID_Gasto });
+                await apiCall('crud', { sheetName: 'Productos', operation: 'update', rowData: p, idField: 'ID_Producto', idValue: p.ID_Producto });
+            }
             logAudit('Inventario', 'Reabastecer', `Compra: ${rstData.Producto_Nombre} (+${rstData.Cantidad}) por ${fMoney(gastoCompra.Monto)}`);
-            await apiCall('crud', { sheetName: 'Productos', operation: 'update', rowData: p, idField: 'ID_Producto', idValue: p.ID_Producto });
 
             setLoading(false);
 
@@ -2314,7 +2338,7 @@
 
             const btnAnular = document.getElementById('btn-anular-recibo');
             if(btnAnular) {
-                if(fac.Estatus === 'Cancelado') btnAnular.style.display = 'none';
+                if(ventaEsAnulada(fac)) btnAnular.style.display = 'none';
                 else btnAnular.style.display = '';
             }
 
@@ -2325,10 +2349,14 @@
             if(!checkUserActive()) return;
             const fac = DB.Ventas_Facturas.find(x => x.ID_Factura === facturaId);
             if(!fac) return showToast("Factura no encontrada", "error");
-            if(fac.Estatus === 'Cancelado') return showToast("La factura ya está cancelada", "error");
-            
+            if(ventaEsAnulada(fac)) return showToast("La factura ya está cancelada", "error");
+
             if(!confirm("¿Está seguro que desea anular este recibo? Los productos regresarán al inventario.")) return;
-            
+
+            // Aqui solo se ajusta la copia local para que la pantalla responda al instante.
+            // La devolucion real de stock y el cambio de estado en la hoja los hace
+            // processVoidSale una sola vez; si tambien se mandaran por 'crud' el stock
+            // podia quedar sumado dos veces.
             try {
                 const items = JSON.parse(fac.Items_JSON || '[]');
                 items.forEach(i => {
@@ -2340,10 +2368,7 @@
                             try { its = JSON.parse(p.Productos_JSON||'[]'); } catch(e){}
                             its.forEach(c => {
                                 const subP = DB.Productos.find(x=>x.ID_Producto===c.id);
-                                if(subP) {
-                                    subP.Existencias = Number(subP.Existencias) + (c.cantidad * i.cantidad);
-                                    apiCall('crud', { sheetName: 'Productos', operation: 'update', rowData: subP, idField: 'ID_Producto', idValue: subP.ID_Producto });
-                                }
+                                if(subP) subP.Existencias = Number(subP.Existencias) + (c.cantidad * i.cantidad);
                             });
                         }
                     } else {
@@ -2352,7 +2377,6 @@
                             // HALLAZGO 11: Usar función centralizada
                             const deduction = esVentaFraccionada(i) ? (i.cantidad * (1 / (p.Fraccion_Cant || 1))) : i.cantidad;
                             p.Existencias = Number(p.Existencias) + deduction;
-                            apiCall('crud', { sheetName: 'Productos', operation: 'update', rowData: p, idField: 'ID_Producto', idValue: p.ID_Producto });
                         }
                     }
                 });
@@ -2362,9 +2386,7 @@
             }
 
             fac.Estatus = 'Cancelado';
-            apiCall('crud', { sheetName: 'Ventas_Facturas', operation: 'update', rowData: fac, idField: 'ID_Factura', idValue: fac.ID_Factura });
 
-            // HALLAZGO 5: Crear llamada a processVoidSale en el backend
             const voidPayload = {
                 facturaId: facturaId,
                 facturaData: fac,
@@ -2373,7 +2395,8 @@
                     catch(e) { return []; }
                 })()
             };
-            apiCall('processVoidSale', voidPayload);
+            // apiCall ya muestra el error en pantalla; el catch evita un segundo aviso.
+            apiCall('processVoidSale', voidPayload).catch(() => {});
 
             logAudit('Finanzas', 'Anular Recibo', `Recibo ID: ${facturaId}`);
             
@@ -2427,7 +2450,7 @@
                     <td class="p-3 text-xs">${formatDisplayDate(f.Fecha)}</td>
                     <td class="p-3 font-bold text-sm text-primary">${f.Cliente_Nombre} ${f.Cliente_Apellido||''}</td>
                     <td class="p-3 text-sm"><span class="font-black text-primary">${fMoney(f.Total_Pagar)}</span></td>
-                    <td class="p-3"><span class="px-2 py-1 text-[10px] font-bold uppercase rounded ${f.Estatus==='Cancelado'?'bg-red-100 text-red-600':'bg-accent/20 text-darkaccent'}">${f.Estatus || 'Completado'}</span></td>
+                    <td class="p-3"><span class="px-2 py-1 text-[10px] font-bold uppercase rounded ${ventaEsAnulada(f)?'bg-red-100 text-red-600':'bg-accent/20 text-darkaccent'}">${f.Estatus || 'Completado'}</span></td>
                 </tr>`;
             });
             if(!fFiltered.length) ft.innerHTML = `<tr><td colspan="5" class="p-3 text-center text-gray-500">Sin registros</td></tr>`;
